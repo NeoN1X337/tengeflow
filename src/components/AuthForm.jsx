@@ -1,39 +1,27 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, TextInput, Label, Button, Alert } from 'flowbite-react';
-import { signInWithPopup, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
-import { CheckCircle } from 'lucide-react';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function AuthForm() {
-    const { user } = useAuth();
+    const navigate = useNavigate();
+    const { user, signup } = useAuth();
+    const { showToast } = useNotification();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const [notification, setNotification] = useState('');
 
-    // Проверка sessionStorage для уведомления о регистрации (переживает unmount/remount)
-    useEffect(() => {
-        const regSuccess = sessionStorage.getItem('regSuccess');
-        if (regSuccess) {
-            setNotification('Аккаунт успешно создан! Пожалуйста, войдите.');
-            setIsLogin(true);
-            sessionStorage.removeItem('regSuccess');
-        }
-        setEmail('');
-        setPassword('');
-        setError('');
-    }, []);
-
-    // Очистка полей когда пользователь выходит (НО НЕ УВЕДОМЛЕНИЯ)
+    // Очистка полей когда пользователь выходит
     useEffect(() => {
         if (user === null) {
             setEmail('');
             setPassword('');
             setError('');
-            // НЕ очищаем notification - оно нужно для показа успешной регистрации
         }
     }, [user]);
 
@@ -51,10 +39,11 @@ export default function AuthForm() {
 
     const handleGoogleSignIn = async () => {
         setError('');
-        setNotification('');
         setLoading(true);
         try {
             await signInWithPopup(auth, googleProvider);
+            showToast('Вы успешно вошли через Google!', 'success');
+            navigate('/');
         } catch (err) {
             setError(getErrorMessage(err.code));
         } finally {
@@ -65,7 +54,6 @@ export default function AuthForm() {
     const handleEmailAuth = async (e) => {
         e.preventDefault();
         setError('');
-        setNotification('');
 
         if (!email || !password) {
             setError('Заполните все поля');
@@ -81,22 +69,22 @@ export default function AuthForm() {
         try {
             if (isLogin) {
                 await signInWithEmailAndPassword(auth, email, password);
+                showToast('Добро пожаловать в TengeFlow!', 'success');
+                navigate('/');
             } else {
-                // Регистрация без автоматического входа
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                console.log('User registered:', userCredential.user.email);
+                // Используем Silent Registration из AuthContext
+                await signup(email, password);
 
-                // Сохраняем флаг в sessionStorage ДО signOut (чтобы пережить unmount)
-                sessionStorage.setItem('regSuccess', 'true');
+                // Показываем красивый Toast (он не исчезнет при unmount/remount)
+                showToast('🎉 Аккаунт успешно создан! Пожалуйста, войдите.', 'success', 7000);
 
-                // Сразу выходим после регистрации
-                await auth.signOut();
-                console.log('User signed out after registration');
-
-                // После signOut компонент AuthForm remount'ится и считает флаг из sessionStorage
+                // Переключаемся на форму входа
+                setIsLogin(true);
+                setEmail('');
+                setPassword('');
             }
         } catch (err) {
-            console.error('Registration error:', err);
+            console.error('Auth error:', err);
             setError(getErrorMessage(err.code));
         } finally {
             setLoading(false);
@@ -113,23 +101,6 @@ export default function AuthForm() {
                     Финансовый трекер для Казахстана
                 </p>
 
-                {/* ЯРКОЕ Сообщение об успешной регистрации */}
-                {notification && (
-                    <div className="mb-6 p-5 bg-gradient-to-r from-green-400 to-emerald-500 rounded-lg shadow-2xl border-4 border-green-600 animate-pulse">
-                        <div className="flex items-start gap-3">
-                            <CheckCircle className="w-8 h-8 text-white flex-shrink-0 mt-0.5 drop-shadow-lg" />
-                            <div>
-                                <h3 className="text-xl font-black text-white mb-2 drop-shadow-md">
-                                    {notification}
-                                </h3>
-                                <p className="text-base font-bold text-white drop-shadow-sm">
-                                    Введите ваш email и пароль в форму ниже 👇
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
                 {error && (
                     <Alert color="failure" onDismiss={() => setError('')} className="mb-4">
                         <span className="font-medium">{error}</span>
@@ -143,7 +114,6 @@ export default function AuthForm() {
                         onClick={() => {
                             setIsLogin(true);
                             setError('');
-                            setNotification('');
                         }}
                         disabled={loading}
                         className={`flex-1 py-2.5 px-4 rounded-md font-semibold transition-all ${isLogin
@@ -158,7 +128,6 @@ export default function AuthForm() {
                         onClick={() => {
                             setIsLogin(false);
                             setError('');
-                            setNotification('');
                         }}
                         disabled={loading}
                         className={`flex-1 py-2.5 px-4 rounded-md font-semibold transition-all ${!isLogin
@@ -251,3 +220,4 @@ export default function AuthForm() {
         </div>
     );
 }
+
