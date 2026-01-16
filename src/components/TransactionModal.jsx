@@ -1,0 +1,189 @@
+import { useState } from 'react';
+import { Modal, Label, TextInput, Select, Textarea, Checkbox, Button } from 'flowbite-react';
+
+const INCOME_CATEGORIES = ['Зарплата', 'Фриланс', 'Инвестиции', 'Другое'];
+const EXPENSE_CATEGORIES = ['Продукты', 'Транспорт', 'Аренда', 'Развлечения', 'Каспи-перевод', 'Другое'];
+
+export default function TransactionModal({ show, onClose, onSave }) {
+    const [formData, setFormData] = useState({
+        amount: '',
+        type: 'income',
+        category: 'Зарплата',
+        date: new Date().toISOString().split('T')[0],
+        comment: '',
+        isTaxable: false
+    });
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (!formData.amount || parseFloat(formData.amount) <= 0) {
+            setError('Сумма должна быть больше 0');
+            return;
+        }
+
+        try {
+            await onSave({
+                ...formData,
+                date: new Date(formData.date)
+            });
+
+            // Сбросить форму
+            setFormData({
+                amount: '',
+                type: 'income',
+                category: 'Зарплата',
+                date: new Date().toISOString().split('T')[0],
+                comment: '',
+                isTaxable: false
+            });
+            onClose();
+        } catch (err) {
+            setError('Ошибка при сохранении. Попробуйте снова.');
+            console.error(err);
+        }
+    };
+
+    const handleTypeChange = (type) => {
+        setFormData({
+            ...formData,
+            type,
+            category: type === 'income' ? 'Зарплата' : 'Продукты',
+            isTaxable: false
+        });
+    };
+
+    const categories = formData.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+    return (
+        <Modal
+            show={show}
+            onClose={onClose}
+            size="md"
+            dismissible
+            className="backdrop-blur-sm"
+            position="center"
+        >
+            <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-200">
+                <Modal.Header className="border-b border-gray-200">
+                    <span className="text-xl font-bold text-gray-900">Добавить операцию</span>
+                </Modal.Header>
+                <Modal.Body>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        {error && (
+                            <div className="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm font-medium">
+                                {error}
+                            </div>
+                        )}
+
+                        {/* Тип операции */}
+                        <div>
+                            <Label htmlFor="type" value="Тип операции" className="text-gray-700 font-semibold mb-2 block" />
+                            <Select
+                                id="type"
+                                value={formData.type}
+                                onChange={(e) => handleTypeChange(e.target.value)}
+                                required
+                                className="border-gray-300"
+                            >
+                                <option value="income">Доход</option>
+                                <option value="expense">Расход</option>
+                            </Select>
+                        </div>
+
+                        {/* Сумма */}
+                        <div>
+                            <Label htmlFor="amount" value="Сумма (₸)" className="text-gray-700 font-semibold mb-2 block" />
+                            <TextInput
+                                id="amount"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="5000"
+                                value={formData.amount}
+                                onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                                required
+                                className="border-gray-300"
+                            />
+                        </div>
+
+                        {/* Категория */}
+                        <div>
+                            <Label htmlFor="category" value="Категория" className="text-gray-700 font-semibold mb-2 block" />
+                            <Select
+                                id="category"
+                                value={formData.category}
+                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                required
+                                className="border-gray-300"
+                            >
+                                {categories.map(cat => (
+                                    <option key={cat} value={cat}>{cat}</option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        {/* Дата */}
+                        <div>
+                            <Label htmlFor="date" value="Дата" className="text-gray-700 font-semibold mb-2 block" />
+                            <TextInput
+                                id="date"
+                                type="date"
+                                value={formData.date}
+                                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                required
+                                className="border-gray-300"
+                            />
+                        </div>
+
+                        {/* Чекбокс налога (только для доходов) */}
+                        {formData.type === 'income' && (
+                            <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                <Checkbox
+                                    id="taxable"
+                                    checked={formData.isTaxable}
+                                    onChange={(e) => setFormData({ ...formData, isTaxable: e.target.checked })}
+                                    className="text-blue-600"
+                                />
+                                <Label htmlFor="taxable" className="text-gray-700 font-medium cursor-pointer">
+                                    Облагается налогом (3%)
+                                </Label>
+                            </div>
+                        )}
+
+                        {/* Комментарий */}
+                        <div>
+                            <Label htmlFor="comment" value="Комментарий (необязательно)" className="text-gray-700 font-semibold mb-2 block" />
+                            <Textarea
+                                id="comment"
+                                rows={3}
+                                placeholder="Описание операции..."
+                                value={formData.comment}
+                                onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                                className="border-gray-300"
+                            />
+                        </div>
+
+                        <div className="flex gap-3 justify-end pt-4 border-t border-gray-200">
+                            <Button
+                                color="gray"
+                                onClick={onClose}
+                                className="px-6"
+                            >
+                                <span className="font-semibold">Отмена</span>
+                            </Button>
+                            <Button
+                                type="submit"
+                                className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                            >
+                                <span className="text-white font-semibold">Сохранить</span>
+                            </Button>
+                        </div>
+                    </form>
+                </Modal.Body>
+            </div>
+        </Modal>
+    );
+}
