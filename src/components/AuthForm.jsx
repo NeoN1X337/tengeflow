@@ -14,33 +14,26 @@ export default function AuthForm() {
     const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState('');
 
-    // Проверка localStorage на успешную регистрацию при монтировании (СТРОГО при первой загрузке)
+    // Проверка sessionStorage для уведомления о регистрации (переживает unmount/remount)
     useEffect(() => {
-        const isRegistered = localStorage.getItem('registrationSuccess');
-        if (isRegistered === 'true') {
-            console.log('Registration success flag found in localStorage');
+        const regSuccess = sessionStorage.getItem('regSuccess');
+        if (regSuccess) {
             setNotification('Аккаунт успешно создан! Пожалуйста, войдите.');
-            setIsLogin(true); // Переключаем на вход
-            // Удаляем флаг ТОЛЬКО после того, как сохранили его в state уведомления
-            localStorage.removeItem('registrationSuccess');
-            console.log('Registration success flag removed from localStorage');
+            setIsLogin(true);
+            sessionStorage.removeItem('regSuccess');
         }
-    }, []); // Пустой массив зависимостей - срабатывает ТОЛЬКО при монтировании
-
-    // Очистка полей при монтировании компонента
-    useEffect(() => {
         setEmail('');
         setPassword('');
         setError('');
     }, []);
 
-    // Очистка полей когда пользователь выходит
+    // Очистка полей когда пользователь выходит (НО НЕ УВЕДОМЛЕНИЯ)
     useEffect(() => {
         if (user === null) {
             setEmail('');
             setPassword('');
             setError('');
-            setIsLogin(true);
+            // НЕ очищаем notification - оно нужно для показа успешной регистрации
         }
     }, [user]);
 
@@ -93,16 +86,14 @@ export default function AuthForm() {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 console.log('User registered:', userCredential.user.email);
 
-                // 1. Сначала сохраняем флаг в localStorage
-                localStorage.setItem('registrationSuccess', 'true');
-                console.log('Registration success flag saved to localStorage');
+                // Сохраняем флаг в sessionStorage ДО signOut (чтобы пережить unmount)
+                sessionStorage.setItem('regSuccess', 'true');
 
-                // 2. Сразу выходим после регистрации
+                // Сразу выходим после регистрации
                 await auth.signOut();
                 console.log('User signed out after registration');
 
-                // 3. Только после этого перезагружаем страницу
-                window.location.reload();
+                // После signOut компонент AuthForm remount'ится и считает флаг из sessionStorage
             }
         } catch (err) {
             console.error('Registration error:', err);
@@ -129,7 +120,7 @@ export default function AuthForm() {
                             <CheckCircle className="w-8 h-8 text-white flex-shrink-0 mt-0.5 drop-shadow-lg" />
                             <div>
                                 <h3 className="text-xl font-black text-white mb-2 drop-shadow-md">
-                                    ✅ {notification}
+                                    {notification}
                                 </h3>
                                 <p className="text-base font-bold text-white drop-shadow-sm">
                                     Введите ваш email и пароль в форму ниже 👇
@@ -156,8 +147,8 @@ export default function AuthForm() {
                         }}
                         disabled={loading}
                         className={`flex-1 py-2.5 px-4 rounded-md font-semibold transition-all ${isLogin
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'text-gray-700 hover:bg-gray-100'
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'text-gray-700 hover:bg-gray-100'
                             } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         Вход
@@ -171,8 +162,8 @@ export default function AuthForm() {
                         }}
                         disabled={loading}
                         className={`flex-1 py-2.5 px-4 rounded-md font-semibold transition-all ${!isLogin
-                                ? 'bg-blue-600 text-white shadow-md'
-                                : 'text-gray-700 hover:bg-gray-100'
+                            ? 'bg-blue-600 text-white shadow-md'
+                            : 'text-gray-700 hover:bg-gray-100'
                             } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         Регистрация

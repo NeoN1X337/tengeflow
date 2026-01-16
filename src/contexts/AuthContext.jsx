@@ -12,20 +12,8 @@ export function AuthProvider({ children }) {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            // Проверяем флаг успешной регистрации
-            const registrationSuccess = localStorage.getItem('registrationSuccess');
-
-            if (registrationSuccess === 'true' && firebaseUser) {
-                // Если есть флаг регистрации и пользователь вошел - принудительно выходим
-                console.log('Registration success flag detected, forcing sign out');
-                signOut(auth).then(() => {
-                    setUser(null);
-                    setLoading(false);
-                });
-            } else {
-                setUser(firebaseUser);
-                setLoading(false);
-            }
+            setUser(firebaseUser);
+            setLoading(false);
         });
 
         return unsubscribe;
