@@ -60,7 +60,8 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
                 </div>
 
                 {/* Action Buttons (Row) */}
-                <div className="flex items-center gap-3 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                {/* Action Buttons (Row) */}
+                <div className="flex items-center gap-3">
                     <button
                         onClick={() => onEdit(transaction)}
                         className="text-gray-400 hover:text-blue-600 transition-colors p-1"

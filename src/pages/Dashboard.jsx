@@ -1,16 +1,38 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, Button, Badge } from 'flowbite-react';
 import { Plus, TrendingUp, Wallet, Calendar } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import TransactionModal from '../components/TransactionModal';
 import TransactionItem from '../components/TransactionItem';
+import FilterBar from '../components/FilterBar';
 
 export default function Dashboard() {
     const [showModal, setShowModal] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
+
+    // Состояние фильтров
+    const [filters, setFilters] = useState({
+        type: 'all',
+        month: new Date(), // По умолчанию текущий месяц
+        category: '',
+        isTaxable: false
+    });
+
+    // Вычисляем dateRange на основе выбранного месяца
+    const dateRange = useMemo(() => {
+        if (!filters.month) return null;
+        const start = new Date(filters.month.getFullYear(), filters.month.getMonth(), 1);
+        const end = new Date(filters.month.getFullYear(), filters.month.getMonth() + 1, 0, 23, 59, 59);
+        return { start, end };
+    }, [filters.month]);
+
     const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, balance, totalIncome, totalExpense } = useTransactions({
         filterFuture: true,
-        orderByCreatedAt: true
+        orderByCreatedAt: true,
+        type: filters.type,
+        category: filters.category,
+        isTaxable: filters.isTaxable,
+        dateRange: dateRange
     });
 
     const handleSaveTransaction = async (data) => {
@@ -79,6 +101,8 @@ export default function Dashboard() {
                 <Plus className="w-6 h-6" />
             </button>
 
+            <FilterBar filters={filters} onFilterChange={setFilters} />
+
             {/* Баланс */}
             <Card className="shadow-lg">
                 <div className="text-center">
@@ -120,8 +144,8 @@ export default function Dashboard() {
                     </div>
                 ) : recentTransactions.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
-                        <p>Операций пока нет</p>
-                        <p className="text-sm mt-2">Добавьте первую транзакцию</p>
+                        <p>Операций не найдено</p>
+                        <p className="text-sm mt-2">Попробуйте изменить фильтры</p>
                     </div>
                 ) : (
                     <div className="space-y-3">

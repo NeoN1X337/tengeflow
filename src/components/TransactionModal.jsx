@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Modal, Label, TextInput, Select, Textarea, Checkbox, Button } from 'flowbite-react';
 
-const INCOME_CATEGORIES = ['Зарплата', 'Фриланс', 'Инвестиции', 'Другое'];
-const EXPENSE_CATEGORIES = ['Продукты', 'Транспорт', 'Аренда', 'Развлечения', 'Каспи-перевод', 'Другое'];
+import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants/categories';
 
 export default function TransactionModal({ show, onClose, onSave, initialData = null }) {
     const [formData, setFormData] = useState({

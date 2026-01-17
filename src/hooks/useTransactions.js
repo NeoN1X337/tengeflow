@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, Timestamp, serverTimestamp, where } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, Timestamp, serverTimestamp, where, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -7,6 +7,16 @@ export function useTransactions(options = {}) {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Деструктуризация параметров фильтрации
+    const {
+        filterFuture,
+        orderByCreatedAt,
+        type = 'all',
+        category = '',
+        dateRange = null,
+        isTaxable = false
+    } = options;
 
     useEffect(() => {
         if (!user) {
@@ -17,11 +27,41 @@ export function useTransactions(options = {}) {
 
         let constraints = [];
 
-        if (options.filterFuture) {
-            constraints.push(where('date', '<=', new Date()));
+        // Фильтрация по типу (доход/расход)
+        if (type && type !== 'all') {
+            constraints.push(where('type', '==', type));
         }
 
-        if (options.orderByCreatedAt) {
+        // Фильтрация по категории
+        if (category) {
+            constraints.push(where('category', '==', category));
+        }
+
+        // Фильтрация "Только налогооблагаемые"
+        if (isTaxable) {
+            constraints.push(where('isTaxable', '==', true));
+        }
+
+        // Фильтрация по диапазону дач (например, месяц)
+        if (dateRange && dateRange.start && dateRange.end) {
+            constraints.push(where('date', '>=', Timestamp.fromDate(dateRange.start)));
+            constraints.push(where('date', '<=', Timestamp.fromDate(dateRange.end)));
+        }
+
+        if (filterFuture) {
+            // Если фильтр по дате уже есть, filterFuture может конфликтовать или быть излишним, 
+            // но оставим для совместимости, если dateRange не задан.
+            if (!dateRange) {
+                constraints.push(where('date', '<=', Timestamp.fromDate(new Date())));
+            }
+        }
+
+        // Сортировка
+        // Firestore требует, чтобы первое поле в orderBy совпадало с полем в where (для диапазонов и равенства)
+        // Если мы фильтруем по дате, то сортировка должна быть по дате.
+        if (dateRange || filterFuture) {
+            constraints.push(orderBy('date', 'desc'));
+        } else if (orderByCreatedAt) {
             constraints.push(orderBy('createdAt', 'desc'));
         } else {
             constraints.push(orderBy('date', 'desc'));
@@ -41,10 +81,14 @@ export function useTransactions(options = {}) {
             }));
             setTransactions(txns);
             setLoading(false);
+        }, (error) => {
+            console.error("Error fetching transactions: ", error);
+            setTransactions([]); // Clear data on error to avoid stale state
+            setLoading(false);
         });
 
         return unsubscribe;
-    }, [user, options.filterFuture, options.orderByCreatedAt]);
+    }, [user, filterFuture, orderByCreatedAt, type, category, dateRange, isTaxable]);
 
     const addTransaction = async (data) => {
         if (!user) throw new Error('Не авторизован');
@@ -58,6 +102,27 @@ export function useTransactions(options = {}) {
             comment: data.comment || '',
             createdAt: serverTimestamp()
         });
+    };
+
+    const updateTransaction = async (id, data) => {
+        if (!user) throw new Error('Не авторизован');
+
+        const docRef = doc(db, `users/${user.uid}/transactions`, id);
+        await updateDoc(docRef, {
+            amount: parseFloat(data.amount),
+            type: data.type,
+            category: data.category,
+            date: data.date instanceof Date ? Timestamp.fromDate(data.date) : Timestamp.fromDate(new Date(data.date)),
+            isTaxable: data.isTaxable || false,
+            comment: data.comment || ''
+        });
+    };
+
+    const deleteTransaction = async (id) => {
+        if (!user) throw new Error('Не авторизован');
+
+        const docRef = doc(db, `users/${user.uid}/transactions`, id);
+        await deleteDoc(docRef);
     };
 
     // Вычисление баланса
@@ -87,6 +152,8 @@ export function useTransactions(options = {}) {
         transactions,
         loading,
         addTransaction,
+        updateTransaction,
+        deleteTransaction,
         balance,
         totalIncome,
         totalExpense,
