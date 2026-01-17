@@ -3,13 +3,33 @@ import { Card, Button, Badge } from 'flowbite-react';
 import { Plus, TrendingUp, Wallet, Calendar } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import TransactionModal from '../components/TransactionModal';
+import TransactionItem from '../components/TransactionItem';
 
 export default function Dashboard() {
     const [showModal, setShowModal] = useState(false);
-    const { transactions, loading, addTransaction, balance, totalIncome, totalExpense } = useTransactions();
+    const [editingTransaction, setEditingTransaction] = useState(null);
+    const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, balance, totalIncome, totalExpense } = useTransactions({
+        filterFuture: true,
+        orderByCreatedAt: true
+    });
 
     const handleSaveTransaction = async (data) => {
-        await addTransaction(data);
+        if (editingTransaction) {
+            await updateTransaction(editingTransaction.id, data);
+        } else {
+            await addTransaction(data);
+        }
+    };
+
+    const handleEdit = (txn) => {
+        setEditingTransaction(txn);
+        setShowModal(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Вы уверены, что хотите удалить эту операцию?')) {
+            await deleteTransaction(id);
+        }
     };
 
     const formatCurrency = (amount) => {
@@ -31,13 +51,18 @@ export default function Dashboard() {
     // Последние 5 транзакций
     const recentTransactions = transactions.slice(0, 5);
 
+    const handleAddClick = () => {
+        setEditingTransaction(null);
+        setShowModal(true);
+    };
+
     return (
         <div className="space-y-6 pb-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
                 {/* Desktop button - hidden on mobile */}
                 <Button
-                    onClick={() => setShowModal(true)}
+                    onClick={handleAddClick}
                     className="hidden md:flex bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                 >
                     <Plus className="w-5 h-5 mr-2" />
@@ -47,7 +72,7 @@ export default function Dashboard() {
 
             {/* Mobile FAB - shown only on mobile */}
             <button
-                onClick={() => setShowModal(true)}
+                onClick={handleAddClick}
                 className="md:hidden fixed bottom-20 right-4 z-40 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-200 active:scale-95"
                 aria-label="Добавить операцию"
             >
@@ -101,36 +126,12 @@ export default function Dashboard() {
                 ) : (
                     <div className="space-y-3">
                         {recentTransactions.map((txn) => (
-                            <div
+                            <TransactionItem
                                 key={txn.id}
-                                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-200"
-                            >
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <Badge color={txn.type === 'income' ? 'success' : 'failure'}>
-                                            <span className="font-semibold">
-                                                {txn.type === 'income' ? 'Доход' : 'Расход'}
-                                            </span>
-                                        </Badge>
-                                        <span className="font-medium text-gray-900">
-                                            {txn.category}
-                                        </span>
-                                    </div>
-                                    {txn.comment && (
-                                        <p className="text-sm text-gray-600 mb-1">
-                                            {txn.comment}
-                                        </p>
-                                    )}
-                                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                                        <Calendar className="w-3 h-3" />
-                                        {formatDate(txn.date)}
-                                    </div>
-                                </div>
-                                <div className={`text-xl font-bold ${txn.type === 'income' ? 'text-green-600' : 'text-red-600'
-                                    }`}>
-                                    {txn.type === 'income' ? '+' : '-'}{formatCurrency(txn.amount)} ₸
-                                </div>
-                            </div>
+                                transaction={txn}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                            />
                         ))}
                     </div>
                 )}
@@ -139,8 +140,12 @@ export default function Dashboard() {
             {/* Transaction Modal */}
             <TransactionModal
                 show={showModal}
-                onClose={() => setShowModal(false)}
+                onClose={() => {
+                    setShowModal(false);
+                    setEditingTransaction(null);
+                }}
                 onSave={handleSaveTransaction}
+                initialData={editingTransaction}
             />
         </div>
     );

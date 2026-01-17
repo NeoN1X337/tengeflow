@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Modal, Label, TextInput, Select, Textarea, Checkbox, Button } from 'flowbite-react';
 
 const INCOME_CATEGORIES = ['Зарплата', 'Фриланс', 'Инвестиции', 'Другое'];
 const EXPENSE_CATEGORIES = ['Продукты', 'Транспорт', 'Аренда', 'Развлечения', 'Каспи-перевод', 'Другое'];
 
-export default function TransactionModal({ show, onClose, onSave }) {
+export default function TransactionModal({ show, onClose, onSave, initialData = null }) {
     const [formData, setFormData] = useState({
         amount: '',
         type: 'income',
@@ -13,6 +13,26 @@ export default function TransactionModal({ show, onClose, onSave }) {
         comment: '',
         isTaxable: false
     });
+
+    useEffect(() => {
+        if (show && initialData) {
+            setFormData({
+                ...initialData,
+                date: initialData.date instanceof Date
+                    ? initialData.date.toISOString().split('T')[0]
+                    : new Date(initialData.date).toISOString().split('T')[0]
+            });
+        } else if (show && !initialData) {
+            setFormData({
+                amount: '',
+                type: 'income',
+                category: 'Зарплата',
+                date: new Date().toISOString().split('T')[0],
+                comment: '',
+                isTaxable: false
+            });
+        }
+    }, [show, initialData]);
     const [error, setError] = useState('');
 
     const handleSubmit = async (e) => {
@@ -31,14 +51,7 @@ export default function TransactionModal({ show, onClose, onSave }) {
             });
 
             // Сбросить форму
-            setFormData({
-                amount: '',
-                type: 'income',
-                category: 'Зарплата',
-                date: new Date().toISOString().split('T')[0],
-                comment: '',
-                isTaxable: false
-            });
+            // Форма сбрасывается в useEffect
             onClose();
         } catch (err) {
             setError('Ошибка при сохранении. Попробуйте снова.');
@@ -68,7 +81,9 @@ export default function TransactionModal({ show, onClose, onSave }) {
         >
             <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-200">
                 <Modal.Header className="border-b border-gray-200">
-                    <span className="text-xl font-bold text-gray-900">Добавить операцию</span>
+                    <span className="text-xl font-bold text-gray-900">
+                        {initialData ? 'Редактировать операцию' : 'Добавить операцию'}
+                    </span>
                 </Modal.Header>
                 <Modal.Body>
                     <form onSubmit={handleSubmit} className="space-y-4">
@@ -131,6 +146,7 @@ export default function TransactionModal({ show, onClose, onSave }) {
                             <TextInput
                                 id="date"
                                 type="date"
+                                max={new Date().toISOString().split('T')[0]}
                                 value={formData.date}
                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                                 required
@@ -178,7 +194,9 @@ export default function TransactionModal({ show, onClose, onSave }) {
                                 type="submit"
                                 className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                             >
-                                <span className="text-white font-semibold">Сохранить</span>
+                                <span className="text-white font-semibold">
+                                    {initialData ? 'Сохранить изменения' : 'Сохранить'}
+                                </span>
                             </Button>
                         </div>
                     </form>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { collection, addDoc, query, orderBy, onSnapshot, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, Timestamp, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 
-export function useTransactions() {
+export function useTransactions(options = {}) {
     const { user } = useAuth();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -15,9 +15,21 @@ export function useTransactions() {
             return;
         }
 
+        let constraints = [];
+
+        if (options.filterFuture) {
+            constraints.push(where('date', '<=', new Date()));
+        }
+
+        if (options.orderByCreatedAt) {
+            constraints.push(orderBy('createdAt', 'desc'));
+        } else {
+            constraints.push(orderBy('date', 'desc'));
+        }
+
         const q = query(
             collection(db, `users/${user.uid}/transactions`),
-            orderBy('date', 'desc')
+            ...constraints
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -32,7 +44,7 @@ export function useTransactions() {
         });
 
         return unsubscribe;
-    }, [user]);
+    }, [user, options.filterFuture, options.orderByCreatedAt]);
 
     const addTransaction = async (data) => {
         if (!user) throw new Error('Не авторизован');
@@ -44,7 +56,7 @@ export function useTransactions() {
             date: data.date instanceof Date ? Timestamp.fromDate(data.date) : Timestamp.fromDate(new Date(data.date)),
             isTaxable: data.isTaxable || false,
             comment: data.comment || '',
-            createdAt: Timestamp.now()
+            createdAt: serverTimestamp()
         });
     };
 
