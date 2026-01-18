@@ -188,6 +188,7 @@ export default function AuthForm() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             disabled={loading}
+                            data-testid="auth-email-input"
                             className="mt-1"
                         />
                     </div>
@@ -202,6 +203,7 @@ export default function AuthForm() {
                             onChange={(e) => setPassword(e.target.value)}
                             required
                             disabled={loading}
+                            data-testid="auth-password-input"
                             className="mt-1"
                         />
                     </div>
@@ -210,6 +212,7 @@ export default function AuthForm() {
                         type="submit"
                         disabled={loading}
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        data-testid="auth-submit-button"
                     >
                         <span className="text-white font-semibold">
                             {loading ? 'Загрузка...' : isLogin ? 'Войти' : 'Зарегистрироваться'}

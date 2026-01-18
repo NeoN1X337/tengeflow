@@ -34,7 +34,7 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
                         {transaction.category}
                     </span>
                     {transaction.isTaxable && (
-                        <div className="bg-blue-100 text-blue-600 p-0.5 rounded-md flex-shrink-0" title="Налог 3%">
+                        <div className="bg-blue-100 text-blue-600 p-0.5 rounded-md flex-shrink-0" title="Налог 4%">
                             <Percent className="w-3 h-3" />
                         </div>
                     )}
@@ -55,7 +55,7 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
             <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                 {/* Amount */}
                 <div className={`text-base font-bold whitespace-nowrap ${isIncome ? 'text-green-600' : 'text-red-600'
-                    }`}>
+                    }`} data-testid="transaction-amount">
                     {isIncome ? '+' : '-'}{formatCurrency(transaction.amount)} ₸
                 </div>
 

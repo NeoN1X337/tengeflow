@@ -145,8 +145,8 @@ export function useTransactions(options = {}) {
         .filter(txn => txn.type === 'income' && txn.isTaxable)
         .reduce((acc, txn) => acc + txn.amount, 0);
 
-    // Налог 3%
-    const tax = taxableIncome * 0.03;
+    // Налог 4%
+    const tax = taxableIncome * 0.04;
 
     return {
         transactions,

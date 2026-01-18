@@ -86,6 +86,7 @@ export default function Dashboard() {
                 <Button
                     onClick={handleAddClick}
                     className="hidden md:flex bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                    data-testid="add-transaction-button"
                 >
                     <Plus className="w-5 h-5 mr-2" />
                     <span className="text-white font-semibold">Добавить операцию</span>
@@ -104,10 +105,10 @@ export default function Dashboard() {
             <FilterBar filters={filters} onFilterChange={setFilters} />
 
             {/* Баланс */}
-            <Card className="shadow-lg">
+            <Card className="shadow-lg" data-testid="balance-card">
                 <div className="text-center">
                     <p className="text-sm text-gray-500 mb-2">Текущий баланс</p>
-                    <h2 className="text-4xl font-bold text-gray-900 mb-1">
+                    <h2 className="text-4xl font-bold text-gray-900 mb-1" data-testid="total-balance">
                         {formatCurrency(balance)} ₸
                     </h2>
                     <div className="flex items-center justify-center gap-6 mt-4">
@@ -148,7 +149,7 @@ export default function Dashboard() {
                         <p className="text-sm mt-2">Попробуйте изменить фильтры</p>
                     </div>
                 ) : (
-                    <div className="space-y-3">
+                    <div className="space-y-3" data-testid="transaction-list">
                         {recentTransactions.map((txn) => (
                             <TransactionItem
                                 key={txn.id}

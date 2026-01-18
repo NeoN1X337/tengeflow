@@ -77,6 +77,7 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
             dismissible
             className="backdrop-blur-sm"
             position="center"
+            data-testid="modal-overlay"
         >
             <div className="relative bg-white rounded-lg shadow-2xl border-2 border-gray-200">
                 <Modal.Header className="border-b border-gray-200">
@@ -101,6 +102,7 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                                 onChange={(e) => handleTypeChange(e.target.value)}
                                 required
                                 className="border-gray-300"
+                                data-testid="transaction-type-select"
                             >
                                 <option value="income">Доход</option>
                                 <option value="expense">Расход</option>
@@ -120,6 +122,7 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                                 onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                                 required
                                 className="border-gray-300"
+                                data-testid="transaction-amount-input"
                             />
                         </div>
 
@@ -161,9 +164,10 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                                     checked={formData.isTaxable}
                                     onChange={(e) => setFormData({ ...formData, isTaxable: e.target.checked })}
                                     className="text-blue-600"
+                                    data-testid="tax-checkbox"
                                 />
                                 <Label htmlFor="taxable" className="text-gray-700 font-medium cursor-pointer">
-                                    Облагается налогом (3%)
+                                    Облагается налогом (4%)
                                 </Label>
                             </div>
                         )}
@@ -192,6 +196,7 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                             <Button
                                 type="submit"
                                 className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                data-testid="save-button"
                             >
                                 <span className="text-white font-semibold">
                                     {initialData ? 'Сохранить изменения' : 'Сохранить'}
