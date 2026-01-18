@@ -60,11 +60,11 @@ export function useTransactions(options = {}) {
         // Firestore требует, чтобы первое поле в orderBy совпадало с полем в where (для диапазонов и равенства)
         // Если мы фильтруем по дате, то сортировка должна быть по дате.
         if (dateRange || filterFuture) {
-            constraints.push(orderBy('date', 'desc'));
+            constraints.push(orderBy('date', 'desc'), orderBy('createdAt', 'desc'));
         } else if (orderByCreatedAt) {
             constraints.push(orderBy('createdAt', 'desc'));
         } else {
-            constraints.push(orderBy('date', 'desc'));
+            constraints.push(orderBy('date', 'desc'), orderBy('createdAt', 'desc'));
         }
 
         const q = query(

@@ -190,7 +190,7 @@ export default function Analytics() {
 
                     <div className="h-[300px] w-full">
                         {expenseData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <PieChart>
                                     <Pie
                                         data={expenseData}
@@ -232,7 +232,7 @@ export default function Analytics() {
 
                     <div className="h-[300px] w-full">
                         {trendData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height="100%">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart
                                     data={trendData}
                                     margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
