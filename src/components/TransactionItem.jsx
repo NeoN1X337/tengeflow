@@ -4,8 +4,8 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('ru-KZ', {
             style: 'decimal',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }).format(amount);
     };
 

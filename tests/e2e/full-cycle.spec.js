@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
 
 test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
     test.slow(); // Тест может идти дольше обычного из-за переходов
@@ -10,19 +11,16 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
         // Ждем пока пропадет глобальный лоадер приложения (App loading)
         await expect(page.locator('text=Загрузка...')).not.toBeVisible({ timeout: 15000 });
 
-        // Проверяем, авторизованы ли мы
-        const isDashboardVisible = await page.getByTestId('balance-card').isVisible();
+        // Wait for either Login Form OR Dashboard to be visible
+        const loginInput = page.getByTestId('auth-email-input');
+        const balanceCard = page.getByTestId('balance-card');
+        await expect(loginInput.or(balanceCard)).toBeVisible({ timeout: 20000 });
 
-        if (!isDashboardVisible) {
-            // Если не на дашборде, значит должны быть на логине
-            await expect(page.getByTestId('auth-email-input')).toBeVisible();
+        if (await loginInput.isVisible()) {
+            const email = process.env.TEST_EMAIL || 'test@example.com';
+            const password = process.env.TEST_PASSWORD || 'password';
 
-            const email = process.env.TEST_EMAIL;
-            const password = process.env.TEST_PASSWORD;
-
-            if (!email || !password) throw new Error('Creds missing');
-
-            await page.getByTestId('auth-email-input').fill(email);
+            await loginInput.fill(email);
             await page.getByTestId('auth-password-input').fill(password);
             await page.getByTestId('auth-submit-button').click();
         }
@@ -71,7 +69,10 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
         await expect(page.getByText('Налоговый монитор')).toBeVisible();
 
         const taxTextBefore = await page.getByTestId('tax-monitor-amount').innerText();
-        const parseAmount = (text) => parseFloat(text.replace(/[^\d]/g, '')) || 0;
+        const parseAmount = (text) => {
+            const cleaned = text.replace(/[^\d,]/g, '').replace(',', '.');
+            return parseFloat(cleaned) || 0;
+        };
         const taxBefore = parseAmount(taxTextBefore);
 
         // Возвращаемся на Dashboard
@@ -86,16 +87,69 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
         await page.getByTestId('save-button').click();
         await expect(page.getByTestId('modal-overlay').first()).toBeHidden();
 
-        // --- 5. Verify Analytics Increase ---
-        await page.getByRole('link', { name: 'Аналитика' }).click();
-        await expect(page.getByText('Налоговый монитор')).toBeVisible();
+        // --- 5. Verify Analytics Increase (Feb Transaction) ---
+        // Сценарий: Добавляем транзакцию за Февраль 2026 и проверяем Q1 и H1.
 
-        // Ждем обновления данных (может быть задержка Firebase)
+        // 1. Сначала получим текущие значения налога Q1 и H1
+        await page.getByRole('link', { name: 'Аналитика' }).click();
+        await expect(page.getByText('Налоговый календарь 2026')).toBeVisible();
+
+        const getTaxValue = async (testId) => {
+            const text = await page.getByTestId(testId).innerText();
+            // Remove non-numeric except comma, then replace comma with dot
+            const cleaned = text.replace(/[^\d,]/g, '').replace(',', '.');
+            return parseFloat(cleaned) || 0;
+        };
+
+        const taxQ1Before = await getTaxValue('tax-q1');
+        const taxH1Before = await getTaxValue('tax-h1');
+
+        // 2. Добавляем транзакцию: 100 000 KZT, 15 Февраля 2026, Налог вкл.
+        // Переходим на Dashboard чтобы открыть модалку (кнопка добавления там global, но проверим контекст)
+        // Кнопка добавления может быть в шапке или на дашборде. В MainLayout?
+        // В тесте выше используется `page.getByTestId('add-transaction-button')`.
+        // Предполагаем, что она доступна. Если нет, вернемся на дашборд.
+        await page.goto('/');
+        await expect(page.getByTestId('balance-card')).toBeVisible();
+
+        await page.getByTestId('add-transaction-button').click();
+        await page.getByTestId('transaction-amount-input').fill('100000');
+        await page.getByTestId('transaction-type-select').selectOption('income');
+
+        // Установка даты: 2026-01-15 (Past valid date)
+        // fill принимает YYYY-MM-DD
+        await page.locator('input[type="date"]').fill('2026-01-15');
+
+        await page.getByTestId('tax-checkbox').check();
+        await page.getByTestId('save-button').click();
+        await expect(page.getByTestId('modal-overlay').first()).toBeHidden();
+
+        // 3. Проверяем изменения в Аналитике.
+        // Налог с 100 000 = 4 000.
+        // Q1 (Янв-Мар) должен увеличиться на 4000.
+        // H1 (Янв-Июн) должен увеличиться на 4000.
+
+        await page.getByRole('link', { name: 'Аналитика' }).click();
+        await expect(page.getByText('Налоговый календарь 2026')).toBeVisible();
+
         await expect(async () => {
-            const taxTextAfter = await page.getByTestId('tax-monitor-amount').innerText();
-            const taxAfter = parseAmount(taxTextAfter);
-            // Налог 4% от 50 000 = 2000
-            expect(taxAfter).toBe(taxBefore + 2000);
+            const taxQ1After = await getTaxValue('tax-q1');
+            const taxH1After = await getTaxValue('tax-h1');
+
+            expect(taxQ1After).toBe(taxQ1Before + 4000);
+            expect(taxH1After).toBe(taxH1Before + 4000);
         }).toPass({ timeout: 10000 });
+
+        // --- 6. Verify Year Isolation & Rounding ---
+        // Переключаемся на 2025 год и проверяем, что там 0 или нет наших транзакций.
+        await page.locator('#year-select').selectOption('2025');
+        await expect(page.getByText('Налоговый календарь 2025')).toBeVisible();
+
+        // Ждем пока Q1 станет 0 или отличным от 2026
+        // Если база пустая для 2025, должно быть 0.
+        await expect(async () => {
+            const taxQ1_2025 = await getTaxValue('tax-q1');
+            expect(taxQ1_2025).toBe(0);
+        }).toPass();
     });
 });

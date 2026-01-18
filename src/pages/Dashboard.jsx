@@ -5,26 +5,37 @@ import { useTransactions } from '../hooks/useTransactions';
 import TransactionModal from '../components/TransactionModal';
 import TransactionItem from '../components/TransactionItem';
 import FilterBar from '../components/FilterBar';
+import PeriodSelector from '../components/PeriodSelector';
 
 export default function Dashboard() {
     const [showModal, setShowModal] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
 
+    // Period State
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth().toString()); // Default to current month string '0'..'11'
+
     // Состояние фильтров
     const [filters, setFilters] = useState({
         type: 'all',
-        month: new Date(), // По умолчанию текущий месяц
         category: '',
         isTaxable: false
     });
 
-    // Вычисляем dateRange на основе выбранного месяца
     const dateRange = useMemo(() => {
-        if (!filters.month) return null;
-        const start = new Date(filters.month.getFullYear(), filters.month.getMonth(), 1);
-        const end = new Date(filters.month.getFullYear(), filters.month.getMonth() + 1, 0, 23, 59, 59);
-        return { start, end };
-    }, [filters.month]);
+        if (selectedMonth === 'all') {
+            return {
+                start: new Date(selectedYear, 0, 1),
+                end: new Date(selectedYear, 11, 31, 23, 59, 59)
+            };
+        } else {
+            const monthIndex = parseInt(selectedMonth);
+            return {
+                start: new Date(selectedYear, monthIndex, 1),
+                end: new Date(selectedYear, monthIndex + 1, 0, 23, 59, 59)
+            };
+        }
+    }, [selectedYear, selectedMonth]);
 
     const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, balance, totalIncome, totalExpense } = useTransactions({
         filterFuture: true,
@@ -57,8 +68,8 @@ export default function Dashboard() {
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('ru-KZ', {
             style: 'decimal',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
         }).format(amount);
     };
 
@@ -80,17 +91,28 @@ export default function Dashboard() {
 
     return (
         <div className="space-y-6 pb-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                {/* Desktop button - hidden on mobile */}
-                <Button
-                    onClick={handleAddClick}
-                    className="hidden md:flex bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                    data-testid="add-transaction-button"
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    <span className="text-white font-semibold">Добавить операцию</span>
-                </Button>
+
+                <div className="flex gap-4 items-center">
+                    <PeriodSelector
+                        selectedYear={selectedYear}
+                        selectedMonth={selectedMonth}
+                        onYearChange={setSelectedYear}
+                        onMonthChange={setSelectedMonth}
+                        years={[2024, 2025, 2026, 2027, 2028]}
+                    />
+
+                    {/* Desktop button - hidden on mobile */}
+                    <Button
+                        onClick={handleAddClick}
+                        className="hidden md:flex bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                        data-testid="add-transaction-button"
+                    >
+                        <Plus className="w-5 h-5 mr-2" />
+                        <span className="text-white font-semibold">Добавить</span>
+                    </Button>
+                </div>
             </div>
 
             {/* Mobile FAB - shown only on mobile */}

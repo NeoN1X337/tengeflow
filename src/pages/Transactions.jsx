@@ -4,30 +4,42 @@ import { useTransactions } from '../hooks/useTransactions';
 import TransactionModal from '../components/TransactionModal';
 import TransactionItem from '../components/TransactionItem';
 import FilterBar from '../components/FilterBar';
+import PeriodSelector from '../components/PeriodSelector';
 
 export default function Transactions() {
     const [showModal, setShowModal] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
 
-    // Состояние фильтров
+    // Period State
+    const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+    const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth().toString()); // Default to current month string '0'..'11'
+
+    // Состояние фильтров (Category/Type/Taxable only now)
     const [filters, setFilters] = useState({
         type: 'all',
-        month: new Date(), // По умолчанию текущий месяц
         category: '',
         isTaxable: false
     });
 
-    // Вычисляем dateRange на основе выбранного месяца
+    // Вычисляем dateRange
     const dateRange = useMemo(() => {
-        if (!filters.month || !(filters.month instanceof Date) || isNaN(filters.month)) return null;
-        const start = new Date(filters.month.getFullYear(), filters.month.getMonth(), 1);
-        const end = new Date(filters.month.getFullYear(), filters.month.getMonth() + 1, 0, 23, 59, 59);
-        return { start, end };
-    }, [filters.month]);
+        if (selectedMonth === 'all') {
+            return {
+                start: new Date(selectedYear, 0, 1),
+                end: new Date(selectedYear, 11, 31, 23, 59, 59)
+            };
+        } else {
+            const monthIndex = parseInt(selectedMonth);
+            return {
+                start: new Date(selectedYear, monthIndex, 1),
+                end: new Date(selectedYear, monthIndex + 1, 0, 23, 59, 59)
+            };
+        }
+    }, [selectedYear, selectedMonth]);
 
     const { transactions, loading, updateTransaction, deleteTransaction } = useTransactions({
-        filterFuture: true, // Можно оставить или убрать, если dateRange покрывает это
-        orderByCreatedAt: true, // Или false, если хотим сортировку по дате транзакции
+        filterFuture: true,
+        orderByCreatedAt: true,
         type: filters.type,
         category: filters.category,
         isTaxable: filters.isTaxable,
@@ -71,8 +83,15 @@ export default function Transactions() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <h1 className="text-3xl font-bold text-gray-900 dark:text-white">История транзакций</h1>
+                <PeriodSelector
+                    selectedYear={selectedYear}
+                    selectedMonth={selectedMonth}
+                    onYearChange={setSelectedYear}
+                    onMonthChange={setSelectedMonth}
+                    years={[2024, 2025, 2026, 2027, 2028]}
+                />
             </div>
 
             <FilterBar filters={filters} onFilterChange={setFilters} />

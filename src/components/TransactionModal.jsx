@@ -38,14 +38,24 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
         e.preventDefault();
         setError('');
 
-        if (!formData.amount || parseFloat(formData.amount) <= 0) {
-            setError('Сумма должна быть больше 0');
+        if (!formData.amount || parseFloat(formData.amount) < 1) {
+            setError('Сумма должна быть не менее 1 ₸');
+            return;
+        }
+
+        const selectedDate = new Date(formData.date);
+        const today = new Date();
+        today.setHours(23, 59, 59, 999); // Allow today until end of day
+
+        if (selectedDate > today) {
+            setError('Будущие даты недоступны');
             return;
         }
 
         try {
             await onSave({
                 ...formData,
+                amount: parseFloat(formData.amount),
                 date: new Date(formData.date)
             });
 
@@ -115,7 +125,7 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                             <TextInput
                                 id="amount"
                                 type="number"
-                                min="0"
+                                min="1"
                                 step="0.01"
                                 placeholder="5000"
                                 value={formData.amount}

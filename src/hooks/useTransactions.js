@@ -146,6 +146,7 @@ export function useTransactions(options = {}) {
         .reduce((acc, txn) => acc + txn.amount, 0);
 
     // Налог 4%
+    // Налог 4%
     const tax = taxableIncome * 0.04;
 
     return {

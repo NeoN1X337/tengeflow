@@ -6,26 +6,8 @@ import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants/categories';
 export default function FilterBar({ filters, onFilterChange }) {
     const [showModal, setShowModal] = useState(false);
 
-    // Generate last 12 months for selector
-    const getMonths = () => {
-        const months = [];
-        const date = new Date();
-        for (let i = 0; i < 12; i++) {
-            const d = new Date(date.getFullYear(), date.getMonth() - i, 1);
-            months.push(d);
-        }
-        return months;
-    };
-
-    const months = getMonths();
-
     const handleTypeChange = (type) => {
         onFilterChange({ ...filters, type, category: '' });
-    };
-
-    const handleMonthChange = (e) => {
-        const value = e.target.value;
-        onFilterChange({ ...filters, month: value ? new Date(value) : null });
     };
 
     const handleCategoryChange = (e) => {
@@ -85,19 +67,6 @@ export default function FilterBar({ filters, onFilterChange }) {
                 </div>
 
                 <div className="flex gap-2 w-full sm:w-auto">
-                    {/* Month Select */}
-                    <Select
-                        value={filters.month ? filters.month.toISOString() : ''}
-                        onChange={handleMonthChange}
-                        className="w-full sm:w-48"
-                    >
-                        {months.map(date => (
-                            <option key={date.toISOString()} value={date.toISOString()}>
-                                {date.toLocaleString('ru-RU', { month: 'long', year: 'numeric' })}
-                            </option>
-                        ))}
-                    </Select>
-
                     {/* Additional Filters Button */}
                     <Button
                         color="gray"
