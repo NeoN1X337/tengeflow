@@ -9,16 +9,8 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
-    const isRegistering = useRef(false);
-
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
-            // Игнорируем промежуточный auth state во время регистрации
-            if (isRegistering.current) {
-                console.log('Registration in progress, ignoring auth state change');
-                return;
-            }
-
             setUser(firebaseUser);
             setLoading(false);
         });
@@ -28,30 +20,26 @@ export function AuthProvider({ children }) {
 
     const signup = async (email, password) => {
         try {
-            // Устанавливаем флаг ПЕРЕД регистрацией
-            isRegistering.current = true;
-            console.log('Starting silent registration for:', email);
+            console.log('Starting registration for:', email);
 
-            // Firebase автоматически авторизует, но мы игнорируем это в onAuthStateChanged
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+            // Manually update state to prevent race condition with navigation
+            setUser(userCredential.user);
 
             // Отправляем письмо подтверждения
             await sendEmailVerification(userCredential.user);
             console.log('Verification email sent');
 
-            console.log('User created, signing out immediately');
-
-            // Сразу выходим
-            await signOut(auth);
-            console.log('Silent registration completed');
+            // Мы НЕ выходим сразу, чтобы пользователь мог увидеть страницу VerifyEmail
+            // App.jsx перенаправит его туда, так как emailVerified === false
+            console.log('Registration completed, user remains logged in for verification check');
 
             return { success: true };
         } catch (error) {
             console.error('Registration error:', error);
             throw error;
         } finally {
-            // Снимаем флаг ПОСЛЕ завершения операции
-            isRegistering.current = false;
             setLoading(false);
         }
     };

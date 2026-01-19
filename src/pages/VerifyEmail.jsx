@@ -2,8 +2,20 @@ import { Card, Button } from 'flowbite-react';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+import { useAuth } from '../contexts/AuthContext';
+
 export default function VerifyEmail() {
     const navigate = useNavigate();
+    const { logout } = useAuth();
+
+    const handleLogout = async () => {
+        try {
+            await logout();
+            navigate('/');
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+    };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
@@ -28,11 +40,11 @@ export default function VerifyEmail() {
                 <div className="flex justify-center">
                     <Button
                         color="gray"
-                        onClick={() => navigate('/')}
+                        onClick={handleLogout}
                         className="w-full"
                     >
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Вернуться ко входу
+                        Выйти
                     </Button>
                 </div>
             </Card>

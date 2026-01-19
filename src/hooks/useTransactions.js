@@ -15,7 +15,8 @@ export function useTransactions(options = {}) {
         type = 'all',
         category = '',
         dateRange = null,
-        isTaxable = false
+        isTaxable = false,
+        taxRate = 4 // Default 4%
     } = options;
 
     useEffect(() => {
@@ -145,9 +146,8 @@ export function useTransactions(options = {}) {
         .filter(txn => txn.type === 'income' && txn.isTaxable)
         .reduce((acc, txn) => acc + txn.amount, 0);
 
-    // Налог 4%
-    // Налог 4%
-    const tax = taxableIncome * 0.04;
+    // Динамический налог (например 3% или 4%)
+    const tax = taxableIncome * (taxRate / 100);
 
     return {
         transactions,

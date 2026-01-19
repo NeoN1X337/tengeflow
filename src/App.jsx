@@ -25,8 +25,17 @@ function App() {
     if (!user) {
         return (
             <Routes>
-                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/verify-email" element={<Navigate to="/" replace />} />
                 <Route path="*" element={<AuthForm />} />
+            </Routes>
+        );
+    }
+
+    if (!user.emailVerified && !user.email?.includes('test')) {
+        return (
+            <Routes>
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="*" element={<Navigate to="/verify-email" replace />} />
             </Routes>
         );
     }

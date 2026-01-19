@@ -1,9 +1,35 @@
-import { Card, Button } from 'flowbite-react';
-import { LogOut, User, Settings } from 'lucide-react';
+import { Card, Button, Label, TextInput } from 'flowbite-react';
+import { LogOut, User, Settings, Save } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserProfile } from '../hooks/useUserProfile';
+import { useState, useEffect } from 'react';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function Profile() {
     const { user, logout } = useAuth();
+    const { profile, loading, updateProfile } = useUserProfile();
+    const { showToast } = useNotification();
+
+    const [taxRate, setTaxRate] = useState(4);
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (profile?.taxRate) {
+            setTaxRate(profile.taxRate);
+        }
+    }, [profile]);
+
+    const handleSaveTaxRate = async () => {
+        setSaving(true);
+        try {
+            await updateProfile({ taxRate: parseFloat(taxRate) });
+            showToast('Налоговая ставка обновлена', 'success');
+        } catch (error) {
+            showToast('Ошибка при обновлении', 'error');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     const handleLogout = async () => {
         try {
@@ -31,23 +57,55 @@ export default function Profile() {
                     </div>
                 </div>
 
-                <div className="space-y-3">
-                    <Button
-                        color="light"
-                        className="w-full justify-start border-2 border-gray-300 hover:bg-gray-50"
-                    >
-                        <Settings className="w-5 h-5 mr-2 text-gray-700" />
-                        <span className="text-gray-700 font-medium">Настройки</span>
-                    </Button>
+                <div className="space-y-6">
+                    {/* Настройки ИП */}
+                    <div>
+                        <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Settings className="w-5 h-5" />
+                            Настройки ИП
+                        </h4>
 
-                    <Button
-                        color="failure"
-                        onClick={handleLogout}
-                        className="w-fit px-6 bg-red-600 hover:bg-red-700"
-                    >
-                        <LogOut className="w-5 h-5 mr-2" />
-                        <span className="text-white font-semibold">Выйти из профиля</span>
-                    </Button>
+                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                            <div className="mb-2 block">
+                                <Label htmlFor="tax-rate" value="Текущая ставка налога (%)" />
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center max-w-md">
+                                <TextInput
+                                    id="tax-rate"
+                                    type="number"
+                                    step="0.1"
+                                    value={taxRate}
+                                    onChange={(e) => setTaxRate(e.target.value)}
+                                    disabled={loading || saving}
+                                    required
+                                    className="w-full sm:w-32"
+                                />
+                                <Button
+                                    onClick={handleSaveTaxRate}
+                                    isProcessing={saving}
+                                    disabled={loading || saving}
+                                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-0 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5"
+                                >
+                                    <Save className="w-4 h-4 mr-2" />
+                                    Сохранить ставку
+                                </Button>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-2">
+                                Используется для автоматического расчета налогов в аналитике и мониторе.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-gray-200">
+                        <Button
+                            color="failure"
+                            onClick={handleLogout}
+                            className="w-fit px-6 bg-red-600 hover:bg-red-700"
+                        >
+                            <LogOut className="w-5 h-5 mr-2" />
+                            <span className="text-white font-semibold">Выйти из профиля</span>
+                        </Button>
+                    </div>
                 </div>
             </Card>
         </div>

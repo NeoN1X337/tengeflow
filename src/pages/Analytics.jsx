@@ -1,13 +1,14 @@
-import { useState, useMemo } from 'react';
-import { Card, Tooltip as FlowbiteTooltip } from 'flowbite-react';
+import { useState, useMemo, useEffect } from 'react';
+import { Card, Tooltip as FlowbiteTooltip, Badge } from 'flowbite-react';
 import PeriodSelector from '../components/PeriodSelector';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip,
     BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
 } from 'recharts';
-import { Calculator, PieChart as PieChartIcon, BarChart3, Calendar } from 'lucide-react';
+import { Calculator, PieChart as PieChartIcon, BarChart3, Calendar, Info } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import { getTaxStats } from '../utils/taxUtils';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
 
@@ -15,6 +16,17 @@ export default function Analytics() {
     // const [period, setPeriod] = useState('month'); // Removed
     const [selectedYear, setSelectedYear] = useState(2026);
     const [selectedMonth, setSelectedMonth] = useState('all');
+
+    // Получаем ставку налога из профиля
+    const { profile } = useUserProfile();
+    const [taxRate, setTaxRate] = useState(4); // Default visual 4, updates from profile
+
+    useEffect(() => {
+        console.log('Analytics mounted');
+        if (profile?.taxRate) {
+            setTaxRate(profile.taxRate);
+        }
+    }, [profile]);
 
     // Вычисление диапазона дат
     const dateRange = useMemo(() => {
@@ -37,7 +49,8 @@ export default function Analytics() {
     }, [selectedYear, selectedMonth]);
 
     const { transactions, taxableIncome, tax, loading } = useTransactions({
-        dateRange
+        dateRange,
+        taxRate // Передаем ставку в хук
     });
 
     // Отдельный запрос для Налогового Календаря (весь выбранный год)
@@ -47,7 +60,8 @@ export default function Analytics() {
     }), [selectedYear]);
 
     const { transactions: yearTransactions } = useTransactions({
-        dateRange: yearDateRange
+        dateRange: yearDateRange,
+        taxRate // Передаем ставку в хук для консистентности (хотя getTaxStats пересчитает)
     });
 
     const formatCurrency = (amount) => {
@@ -105,7 +119,16 @@ export default function Analytics() {
     }, [transactions, dateRange]);
 
     // Данные для Налогового Календаря
-    const taxStats = useMemo(() => getTaxStats(yearTransactions, selectedYear), [yearTransactions, selectedYear]);
+    // Передаем динамическую ставку
+    const taxStats = useMemo(() => getTaxStats(yearTransactions, selectedYear, taxRate),
+        [yearTransactions, selectedYear, taxRate]);
+
+    // Данные для отображения в мониторе
+    // Если выбран "Весь год", берем данные из taxStats для полной синхронизации с календарем
+    // В противном случае берем данные из текущего фильтра (месяца)
+    const displayTaxableIncome = selectedMonth === 'all' ? taxStats.year.income : taxableIncome;
+    const displayTax = selectedMonth === 'all' ? taxStats.year.tax : tax;
+    const displayNetIncome = displayTaxableIncome - displayTax;
 
     return (
         <div className="space-y-6 pb-6">
@@ -137,21 +160,21 @@ export default function Analytics() {
                     <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
                         <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Налогооблагаемый доход</p>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(taxableIncome)} ₸
+                            {formatCurrency(displayTaxableIncome)} ₸
                         </p>
                     </div>
 
                     <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                        <p className="text-sm text-red-600 dark:text-red-400 mb-1">Налог (4%)</p>
+                        <p className="text-sm text-red-600 dark:text-red-400 mb-1">Налог ({taxRate}%)</p>
                         <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="tax-monitor-amount">
-                            {formatCurrency(tax)} ₸
+                            {formatCurrency(displayTax)} ₸
                         </p>
                     </div>
 
                     <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
                         <p className="text-sm text-green-600 dark:text-green-400 mb-1">Чистый доход</p>
                         <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {formatCurrency(netIncome)} ₸
+                            {formatCurrency(displayNetIncome)} ₸
                         </p>
                     </div>
                 </div>
@@ -257,30 +280,38 @@ export default function Analytics() {
                         <Calendar className="w-5 h-5 text-emerald-600" />
                     </div>
                     <div className="flex flex-col">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Налоговый календарь {selectedYear}
-                        </h3>
-                        <p className="text-xs text-gray-500">Ставка 4%</p>
+                        <div className="flex items-center gap-2">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Налоговый календарь {selectedYear}
+                            </h3>
+                            <div className="group relative">
+                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10 text-center">
+                                    Сумма рассчитана автоматически. Пожалуйста, проверяйте актуальные ставки в кабинете налогоплательщика РК
+                                </div>
+                            </div>
+                        </div>
+                        <p className="text-xs text-gray-500">Расчет по ставке {taxRate}%</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {/* Кварталы */}
                     {['q1', 'q2', 'q3', 'q4'].map((q, idx) => (
-                        <div key={q} className="p-3 bg-white border border-gray-100 dark:bg-gray-700/30 rounded-lg shadow-sm">
+                        <div key={q} className={`p-3 rounded-lg border ${taxStats[q].containerClass}`}>
                             <div className="flex justify-between items-start mb-2">
                                 <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Q{idx + 1}</span>
-                                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-600 dark:text-gray-300">
+                                <span className={`text-xs px-2 py-0.5 rounded-full ${taxStats[q].containerClass.includes('emerald') ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'} dark:bg-gray-600 dark:text-gray-300`}>
                                     {taxStats[q].status}
                                 </span>
                             </div>
                             <div className="space-y-1">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Доход:</span>
-                                    <span className="text-emerald-600 font-medium">{formatCurrency(taxStats[q].income)}</span>
+                                    <span className="text-gray-500 font-medium">Доход:</span>
+                                    <span className="text-emerald-600 font-bold">{formatCurrency(taxStats[q].income)}</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-400">Налог:</span>
+                                    <span className="text-gray-500 font-medium">Налог:</span>
                                     <span className="text-orange-600 font-bold" data-testid={`tax-${q}`}>{formatCurrency(taxStats[q].tax)}</span>
                                 </div>
                             </div>
@@ -290,28 +321,77 @@ export default function Analytics() {
 
                 {/* Полугодия */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    {['h1', 'h2'].map((h, idx) => (
-                        <div key={h} className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-dashed border-gray-200 dark:border-gray-600">
-                            <div className="flex justify-between mb-3">
-                                <h4 className="font-bold text-gray-800 dark:text-gray-200">
-                                    {idx === 0 ? '1-е полугодие' : '2-е полугодие'}
-                                </h4>
-                                <span className="text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
-                                    {taxStats[h].status}
+                    {/* 1 полугодие */}
+                    <div className={`p-4 rounded-xl border ${taxStats.h1.containerClass}`}>
+                        <div className="flex justify-between items-start mb-2">
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                1 полугодие
+                            </h4>
+                            <Badge color={['Текущий квартал', 'В процессе накопления', 'Активный период'].includes(taxStats.h1.status) ? 'info' : (taxStats.h1.status === 'Завершено' ? 'gray' : 'blue')}>
+                                {taxStats.h1.status}
+                            </Badge>
+                        </div>
+                        <div className="space-y-1 mb-3">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Доход:</span>
+                                <span className="font-medium">{formatCurrency(taxStats.h1.income)} ₸</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Налог:</span>
+                                <span className="font-medium text-red-600 dark:text-red-400" data-testid="tax-h1">
+                                    {formatCurrency(taxStats.h1.tax)} ₸
                                 </span>
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p className="text-xs text-gray-500 uppercase">Доход</p>
-                                    <p className="text-lg font-bold text-emerald-600">{formatCurrency(taxStats[h].income)}</p>
+                        </div>
+                        {taxStats.h1.deadlines && (
+                            <div className="mt-3 pt-2 border-t border-gray-200/50 text-xs flex flex-col gap-1">
+                                <div className={`flex items-center gap-1 ${taxStats.h1.deadlines.ui.submission.color}`}>
+                                    <span>{taxStats.h1.deadlines.ui.submission.icon}</span>
+                                    <span>Сдача до {taxStats.h1.deadlines.submission}</span>
                                 </div>
-                                <div>
-                                    <p className="text-xs text-gray-500 uppercase">Налог</p>
-                                    <p className="text-lg font-bold text-orange-600" data-testid={`tax-${h}`}>{formatCurrency(taxStats[h].tax)}</p>
+                                <div className={`flex items-center gap-1 ${taxStats.h1.deadlines.ui.payment.color}`}>
+                                    <span>{taxStats.h1.deadlines.ui.payment.icon}</span>
+                                    <span>Оплата до {taxStats.h1.deadlines.payment}</span>
                                 </div>
                             </div>
+                        )}
+                    </div>
+
+                    {/* 2 полугодие */}
+                    <div className={`p-4 rounded-xl border ${taxStats.h2.containerClass}`}>
+                        <div className="flex justify-between items-start mb-2">
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                2 полугодие
+                            </h4>
+                            <Badge color={['Текущий квартал', 'В процессе накопления', 'Активный период'].includes(taxStats.h2.status) ? 'info' : (taxStats.h2.status === 'Завершено' ? 'gray' : 'blue')}>
+                                {taxStats.h2.status}
+                            </Badge>
                         </div>
-                    ))}
+                        <div className="space-y-1 mb-3">
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Доход:</span>
+                                <span className="font-medium">{formatCurrency(taxStats.h2.income)} ₸</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Налог:</span>
+                                <span className="font-medium text-red-600 dark:text-red-400" data-testid="tax-h2">
+                                    {formatCurrency(taxStats.h2.tax)} ₸
+                                </span>
+                            </div>
+                        </div>
+                        {taxStats.h2.deadlines && (
+                            <div className="mt-3 pt-2 border-t border-gray-200/50 text-xs flex flex-col gap-1">
+                                <div className={`flex items-center gap-1 ${taxStats.h2.deadlines.ui.submission.color}`}>
+                                    <span>{taxStats.h2.deadlines.ui.submission.icon}</span>
+                                    <span>Сдача до {taxStats.h2.deadlines.submission}</span>
+                                </div>
+                                <div className={`flex items-center gap-1 ${taxStats.h2.deadlines.ui.payment.color}`}>
+                                    <span>{taxStats.h2.deadlines.ui.payment.icon}</span>
+                                    <span>Оплата до {taxStats.h2.deadlines.payment}</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Итого за год */}

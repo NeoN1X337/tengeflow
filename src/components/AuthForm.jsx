@@ -147,11 +147,11 @@ export default function AuthForm() {
             if (isLogin) {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
 
-                if (!userCredential.user.emailVerified && !email.startsWith('test')) {
-                    await signOut(auth);
-                    setError('Ваша почта не подтверждена. Пожалуйста, проверьте email.');
-                    return;
-                }
+                // if (!userCredential.user.emailVerified && !email.startsWith('test')) {
+                //     await signOut(auth);
+                //     setError('Ваша почта не подтверждена. Пожалуйста, проверьте email.');
+                //     return;
+                // }
 
                 showToast('Добро пожаловать в TengeFlow!', 'success');
                 navigate('/');

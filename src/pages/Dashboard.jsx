@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Card, Button, Badge } from 'flowbite-react';
 import { Plus, TrendingUp, Wallet, Calendar } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
@@ -7,6 +7,7 @@ import TransactionItem from '../components/TransactionItem';
 import FilterBar from '../components/FilterBar';
 import PeriodSelector from '../components/PeriodSelector';
 import { useNotification } from '../contexts/NotificationContext';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 export default function Dashboard() {
     const { showToast } = useNotification();
@@ -16,6 +17,16 @@ export default function Dashboard() {
     // Period State
     const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
     const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth().toString()); // Default to current month string '0'..'11'
+
+    // Get Tax Rate
+    const { profile } = useUserProfile();
+    const [taxRate, setTaxRate] = useState(4);
+
+    useEffect(() => {
+        if (profile?.taxRate) {
+            setTaxRate(profile.taxRate);
+        }
+    }, [profile]);
 
     // Состояние фильтров
     const [filters, setFilters] = useState({
@@ -45,7 +56,8 @@ export default function Dashboard() {
         type: filters.type,
         category: filters.category,
         isTaxable: filters.isTaxable,
-        dateRange: dateRange
+        dateRange: dateRange,
+        taxRate // Pass dynamic tax rate
     });
 
     const handleSaveTransaction = async (data) => {
