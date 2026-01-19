@@ -1,26 +1,63 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, TextInput, Label, Button, Alert } from 'flowbite-react';
-import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { Card, TextInput, Label, Button, Alert, Modal } from 'flowbite-react';
+import { Eye, EyeOff } from 'lucide-react';
+import { signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, googleProvider } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 
 export default function AuthForm() {
     const navigate = useNavigate();
-    const { user, signup } = useAuth();
+    const { user, signup, resetPassword } = useAuth();
     const { showToast } = useNotification();
     const [isLogin, setIsLogin] = useState(true);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [error, setError] = useState('');
+
+    // Reset Password State
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetEmail, setResetEmail] = useState('');
+    const [resetStatus, setResetStatus] = useState({ type: '', message: '' });
     const [loading, setLoading] = useState(false);
+
+    // Password Validation State
+    const [passwordCriteria, setPasswordCriteria] = useState({
+        length: false,
+        upper: false,
+        number: false,
+        special: false
+    });
+
+    useEffect(() => {
+        setPasswordCriteria({
+            length: password.length >= 8,
+            upper: /[A-Z]/.test(password),
+            number: /[0-9]/.test(password),
+            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+        });
+    }, [password]);
+
+    const isPasswordValid = Object.values(passwordCriteria).every(Boolean);
+    const passwordStrength = Object.values(passwordCriteria).filter(Boolean).length;
+
+    // Strict Email Regex
+    const isValidEmail = (email) => {
+        // Enforce at least 2 characters for the domain name (e.g. 'gmail', 'yahoo')
+        // Bans '1@d.com' (1 char domain)
+        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]{2,}\.[a-zA-Z]{2,}$/.test(email);
+    };
 
     // Очистка полей когда пользователь выходит
     useEffect(() => {
         if (user === null) {
             setEmail('');
             setPassword('');
+            setConfirmPassword('');
             setError('');
         }
     }, [user]);
@@ -51,6 +88,36 @@ export default function AuthForm() {
         }
     };
 
+    const handlePasswordReset = async (e) => {
+        e.preventDefault();
+        setResetStatus({ type: '', message: '' });
+
+        if (!resetEmail) {
+            setResetStatus({ type: 'failure', message: 'Введите email' });
+            return;
+        }
+
+        if (!isValidEmail(resetEmail)) {
+            setResetStatus({ type: 'failure', message: 'Введите корректный email' });
+            return;
+        }
+
+        try {
+            await resetPassword(resetEmail);
+            setResetStatus({
+                type: 'success',
+                message: 'Ссылка отправлена. Если письма нет, проверьте "Спам".'
+            });
+            setTimeout(() => {
+                setShowResetModal(false);
+                setResetStatus({ type: '', message: '' });
+                setResetEmail('');
+            }, 6000); // Increased to 6 seconds
+        } catch (error) {
+            setResetStatus({ type: 'failure', message: getErrorMessage(error.code) });
+        }
+    };
+
     const handleEmailAuth = async (e) => {
         e.preventDefault();
         setError('');
@@ -60,28 +127,45 @@ export default function AuthForm() {
             return;
         }
 
-        if (password.length < 6) {
-            setError('Пароль должен быть минимум 6 символов');
-            return;
+        if (isLogin) {
+            // Basic validation for login is fine
+        } else {
+            if (!isValidEmail(email)) {
+                setError('Введите корректный email (например, user@example.com)');
+                return;
+            }
+
+            if (!isPasswordValid) {
+                setError('Пароль не соответствует требованиям безопасности');
+                return;
+            }
         }
+
 
         setLoading(true);
         try {
             if (isLogin) {
-                await signInWithEmailAndPassword(auth, email, password);
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+
+                if (!userCredential.user.emailVerified && !email.startsWith('test')) {
+                    await signOut(auth);
+                    setError('Ваша почта не подтверждена. Пожалуйста, проверьте email.');
+                    return;
+                }
+
                 showToast('Добро пожаловать в TengeFlow!', 'success');
                 navigate('/');
             } else {
-                // Используем Silent Registration из AuthContext
+                if (password !== confirmPassword) {
+                    setError('Пароли не совпадают');
+                    setLoading(false);
+                    return;
+                }
+
+                // Signup sends verification email internally in AuthContext
                 await signup(email, password);
 
-                // Показываем красивый Toast (он не исчезнет при unmount/remount)
-                showToast('🎉 Аккаунт успешно создан! Пожалуйста, войдите.', 'success', 7000);
-
-                // Переключаемся на форму входа
-                setIsLogin(true);
-                setEmail('');
-                setPassword('');
+                navigate('/verify-email');
             }
         } catch (err) {
             console.error('Auth error:', err);
@@ -195,22 +279,105 @@ export default function AuthForm() {
 
                     <div>
                         <Label htmlFor="password" value="Пароль" className="text-gray-700" />
-                        <TextInput
-                            id="password"
-                            type="password"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            disabled={loading}
-                            data-testid="auth-password-input"
-                            className="mt-1"
-                        />
+                        <div className="relative">
+                            <TextInput
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="••••••••"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                disabled={loading}
+                                data-testid="auth-password-input"
+                                className="mt-1"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            >
+                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                        </div>
+
+                        {!isLogin && (
+                            <div className="mt-2 space-y-2">
+                                {/* Strength Meter Bar */}
+                                <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                        className={`h-full transition-all duration-300 ${passwordStrength <= 1 ? 'bg-red-500' :
+                                            passwordStrength <= 3 ? 'bg-yellow-400' : 'bg-green-500'
+                                            }`}
+                                        style={{ width: `${(passwordStrength / 4) * 100}%` }}
+                                    ></div>
+                                </div>
+
+                                {/* Checklist */}
+                                <div className="text-xs space-y-1">
+                                    <div className={passwordCriteria.length ? 'text-green-600' : 'text-gray-500'}>
+                                        {passwordCriteria.length ? '✓' : '•'} Минимум 8 символов
+                                    </div>
+                                    <div className={passwordCriteria.upper ? 'text-green-600' : 'text-gray-500'}>
+                                        {passwordCriteria.upper ? '✓' : '•'} Заглавная буква
+                                    </div>
+                                    <div className={passwordCriteria.number ? 'text-green-600' : 'text-gray-500'}>
+                                        {passwordCriteria.number ? '✓' : '•'} Цифра
+                                    </div>
+                                    <div className={passwordCriteria.special ? 'text-green-600' : 'text-gray-500'}>
+                                        {passwordCriteria.special ? '✓' : '•'} Спецсимвол (!@#$...)
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
+
+                    {!isLogin && (
+                        <div>
+                            <Label htmlFor="confirmPassword" value="Подтвердите пароль" className="text-gray-700" />
+                            <div className="relative">
+                                <TextInput
+                                    id="confirmPassword"
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    placeholder="••••••••"
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    required
+                                    disabled={loading}
+                                    data-testid="auth-confirm-password-input"
+                                    className="mt-1"
+                                    color={confirmPassword && password !== confirmPassword ? "failure" : "gray"}
+                                    helperText={
+                                        confirmPassword && password !== confirmPassword
+                                            ? <span className="font-medium">Пароли не совпадают</span>
+                                            : null
+                                    }
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                >
+                                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {isLogin && (
+                        <div className="flex justify-end">
+                            <button
+                                type="button"
+                                onClick={() => setShowResetModal(true)}
+                                className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                            >
+                                Забыли пароль?
+                            </button>
+                        </div>
+                    )}
 
                     <Button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || (!isLogin && (!isPasswordValid || password !== confirmPassword))}
                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
                         data-testid="auth-submit-button"
                     >
@@ -220,7 +387,54 @@ export default function AuthForm() {
                     </Button>
                 </form>
             </Card>
+
+            {/* Customized Reset Password Modal */}
+            {showResetModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-lg shadow-xl max-w-sm w-full p-6 relative">
+                        <button
+                            onClick={() => setShowResetModal(false)}
+                            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+                        >
+                            ✕
+                        </button>
+
+                        <h3 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+                            Восстановление пароля
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-6 text-center">
+                            Введите email, указанный при регистрации. Мы отправим вам ссылку для восстановления пароля.
+                        </p>
+
+                        {resetStatus.message && (
+                            <Alert color={resetStatus.type} className="mb-4">
+                                <span>{resetStatus.message}</span>
+                            </Alert>
+                        )}
+
+                        <form onSubmit={handlePasswordReset} className="space-y-4">
+                            <div>
+                                <Label htmlFor="reset-email" value="Email" className="mb-2 block font-medium" />
+                                <TextInput
+                                    id="reset-email"
+                                    placeholder="name@company.com"
+                                    value={resetEmail}
+                                    onChange={(event) => setResetEmail(event.target.value)}
+                                    required
+                                    className="border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
+                            <Button
+                                type="submit"
+                                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2"
+                                disabled={Boolean(resetStatus.type === 'success')}
+                            >
+                                {resetStatus.type === 'success' ? 'Отправлено' : 'Отправить ссылку'}
+                            </Button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
-

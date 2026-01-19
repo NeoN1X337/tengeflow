@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import Transactions from './pages/Transactions';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
+import VerifyEmail from './pages/VerifyEmail';
 
 function App() {
     const { user, loading } = useAuth();
@@ -22,7 +23,12 @@ function App() {
     }
 
     if (!user) {
-        return <AuthForm />;
+        return (
+            <Routes>
+                <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="*" element={<AuthForm />} />
+            </Routes>
+        );
     }
 
     return (

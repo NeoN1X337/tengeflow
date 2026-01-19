@@ -4,6 +4,41 @@ import fs from 'fs';
 test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
     test.slow(); // Тест может идти дольше обычного из-за переходов
 
+    test('should show verification message after registration', async ({ page }) => {
+        await page.goto('/');
+
+        // Go to Register
+        const loginButton = page.getByRole('button', { name: 'Вход' });
+        if (await loginButton.isVisible()) {
+            await page.getByRole('button', { name: 'Регистрация' }).click();
+        }
+
+        const email = `test.new.${Date.now()}@example.com`;
+        const weakPassword = 'password';
+        const strongPassword = 'Password123!';
+
+        await page.getByTestId('auth-email-input').fill(email);
+        await page.getByTestId('auth-password-input').fill(weakPassword);
+        await page.getByTestId('auth-confirm-password-input').fill(weakPassword);
+
+        // Button should be disabled due to weak password
+        await expect(page.getByTestId('auth-submit-button')).toBeDisabled();
+
+        // Fix password to be strong
+        await page.getByTestId('auth-password-input').fill(strongPassword);
+        await page.getByTestId('auth-confirm-password-input').fill(strongPassword);
+
+        // Button should be enabled
+        await expect(page.getByTestId('auth-submit-button')).toBeEnabled();
+
+        await page.getByTestId('auth-submit-button').click();
+
+        // Check for redirection to /verify-email and message
+        await expect(page).toHaveURL(/.*verify-email/);
+        await expect(page.getByText('Подтвердите ваш Email')).toBeVisible();
+        await expect(page.getByText('Мы отправили письмо')).toBeVisible();
+    });
+
     test('should complete full user journey', async ({ page }) => {
         // --- 1. Login ---
         await page.goto('/');
@@ -42,6 +77,9 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
 
         // Сохраняем
         await page.getByTestId('save-button').click();
+
+        // Проверка уведомления
+        await expect(page.getByText('Операция добавлена')).toBeVisible();
 
         // Strict Wait: Ждем, пока модалка исчезнет
         // Используем first(), так как Flowbite клонирует атрибуты на overlay и backdrop
@@ -85,6 +123,7 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
         await page.getByTestId('transaction-type-select').selectOption('income');
         await page.getByTestId('tax-checkbox').check();
         await page.getByTestId('save-button').click();
+        await expect(page.getByText('Операция добавлена')).toBeVisible();
         await expect(page.getByTestId('modal-overlay').first()).toBeHidden();
 
         // --- 5. Verify Analytics Increase (Feb Transaction) ---
@@ -122,6 +161,7 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
 
         await page.getByTestId('tax-checkbox').check();
         await page.getByTestId('save-button').click();
+        await expect(page.getByText('Операция добавлена')).toBeVisible();
         await expect(page.getByTestId('modal-overlay').first()).toBeHidden();
 
         // 3. Проверяем изменения в Аналитике.

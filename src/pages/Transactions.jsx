@@ -5,8 +5,10 @@ import TransactionModal from '../components/TransactionModal';
 import TransactionItem from '../components/TransactionItem';
 import FilterBar from '../components/FilterBar';
 import PeriodSelector from '../components/PeriodSelector';
+import { useNotification } from '../contexts/NotificationContext';
 
 export default function Transactions() {
+    const { showToast } = useNotification();
     const [showModal, setShowModal] = useState(false);
     const [editingTransaction, setEditingTransaction] = useState(null);
 
@@ -54,6 +56,7 @@ export default function Transactions() {
     const handleDelete = async (id) => {
         if (window.confirm('Вы уверены, что хотите удалить эту операцию?')) {
             await deleteTransaction(id);
+            showToast('Операция успешно удалена');
         }
     };
 

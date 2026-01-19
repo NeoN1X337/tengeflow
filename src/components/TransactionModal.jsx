@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Modal, Label, TextInput, Select, Textarea, Checkbox, Button } from 'flowbite-react';
+import { useNotification } from '../contexts/NotificationContext';
 
 import { INCOME_CATEGORIES, EXPENSE_CATEGORIES } from '../constants/categories';
 
-export default function TransactionModal({ show, onClose, onSave, initialData = null }) {
+export default function TransactionModal({ show, onClose, onSave, initialData = null, topTransactions = null }) {
+    const { showToast } = useNotification();
     const [formData, setFormData] = useState({
         amount: '',
         type: 'income',
@@ -58,6 +60,29 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                 amount: parseFloat(formData.amount),
                 date: new Date(formData.date)
             });
+
+            // Уведомления
+            if (initialData) {
+                showToast('Изменения сохранены');
+            } else {
+                let message = 'Операция добавлена';
+
+                // Умная логика для Dashboard
+                if (topTransactions && topTransactions.length >= 5) {
+                    const newDate = new Date(formData.date);
+                    newDate.setHours(0, 0, 0, 0);
+
+                    const lastVisibleTxn = topTransactions[topTransactions.length - 1];
+                    const lastVisibleDate = new Date(lastVisibleTxn.date);
+                    lastVisibleDate.setHours(0, 0, 0, 0);
+
+                    if (newDate.getTime() < lastVisibleDate.getTime()) {
+                        message += ' в историю, можете увидеть на странице транзакции (не входит в 5 последних)';
+                    }
+                }
+
+                showToast(message);
+            }
 
             // Сбросить форму
             // Форма сбрасывается в useEffect

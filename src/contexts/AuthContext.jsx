@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, useRef } from 'react';
-import { onAuthStateChanged, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, signOut, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
 
 const AuthContext = createContext({});
@@ -33,7 +33,12 @@ export function AuthProvider({ children }) {
             console.log('Starting silent registration for:', email);
 
             // Firebase автоматически авторизует, но мы игнорируем это в onAuthStateChanged
-            await createUserWithEmailAndPassword(auth, email, password);
+            const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+
+            // Отправляем письмо подтверждения
+            await sendEmailVerification(userCredential.user);
+            console.log('Verification email sent');
+
             console.log('User created, signing out immediately');
 
             // Сразу выходим
@@ -60,8 +65,18 @@ export function AuthProvider({ children }) {
         }
     };
 
+    const resetPassword = async (email) => {
+        try {
+            await sendPasswordResetEmail(auth, email);
+            return { success: true };
+        } catch (error) {
+            console.error('Password reset error:', error);
+            throw error;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, logout, signup }}>
+        <AuthContext.Provider value={{ user, loading, logout, signup, resetPassword }}>
             {children}
         </AuthContext.Provider>
     );
