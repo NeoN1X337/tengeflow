@@ -70,6 +70,38 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
         // Ждем пока пропадет "Загрузка..." (Firebase может долго грузиться)
         await expect(page.locator('.text-center >> text=Загрузка...')).not.toBeVisible({ timeout: 30000 });
 
+        // --- 0. Create Clean State (Cleanup) ---
+        // Verify we are not blocked by previous test runs (reset data)
+        page.on('dialog', dialog => dialog.accept());
+
+        // Go to Transactions
+        await page.getByRole('link', { name: 'Транзакции' }).click();
+        await expect(page.getByRole('heading', { name: 'История транзакций' })).toBeVisible();
+
+        const cleanupYears = ['2026', '2025'];
+        for (const year of cleanupYears) {
+            // Check if year exists in options (in case range is small)
+            // But we assume 2025/2026 are in the static list or generated list
+            await page.locator('#year-select').selectOption(year);
+            await page.locator('#month-select').selectOption('all');
+
+            // Wait for loading to finish
+            await expect(page.locator('text=Загрузка...')).not.toBeVisible();
+
+            // While there are transactions, delete them
+            // Using a loop with count check
+            while ((await page.getByTitle('Удалить').count()) > 0) {
+                await page.getByTitle('Удалить').first().click();
+                // Wait for the specific item to be removed or just wait a bit for firestore
+                // Ideally, we wait for count to decrease, but simple timeout is safer to avoid stale refs
+                await page.waitForTimeout(500);
+            }
+        }
+
+        // Return to dashboard
+        await page.goto('/');
+        await expect(page.getByTestId('balance-card')).toBeVisible();
+
         // --- 2. Action: Create Transaction ---
         await page.getByTestId('add-transaction-button').click();
         await expect(page.getByTestId('save-button')).toBeVisible();
