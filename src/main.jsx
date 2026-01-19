@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import App from './App.jsx';
+import ReloadPrompt from './components/ReloadPrompt';
 import './index.css';
 
 createRoot(document.getElementById('root')).render(
@@ -12,6 +13,7 @@ createRoot(document.getElementById('root')).render(
             <NotificationProvider>
                 <AuthProvider>
                     <App />
+                    <ReloadPrompt />
                 </AuthProvider>
             </NotificationProvider>
         </BrowserRouter>

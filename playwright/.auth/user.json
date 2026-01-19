@@ -1,0 +1,14 @@
+{
+  "cookies": [],
+  "origins": [
+    {
+      "origin": "http://localhost:5173",
+      "localStorage": [
+        {
+          "name": "firebase:authUser:AIzaSyDHuH4crihJVWZAIp-jknNNzVF34tGhvck:[DEFAULT]",
+          "value": "{\"uid\":\"pjqAPkB6vVXUP724zhAly7JsOey1\",\"email\":\"testnewmacos@mail.com\",\"emailVerified\":false,\"isAnonymous\":false,\"providerData\":[{\"providerId\":\"password\",\"uid\":\"testnewmacos@mail.com\",\"displayName\":null,\"email\":\"testnewmacos@mail.com\",\"phoneNumber\":null,\"photoURL\":null}],\"stsTokenManager\":{\"refreshToken\":\"AMf-vBwS_roCeCVaIIYlcBN6TMuM7pU5COolbrHZwmjgDMupv5GHtp5WXATMz0uzwT_AZkY_HiYt0cHkzUVYPFA4Cbri7Eun6nX_wLrp_Fp6E-XcivZkPnaj4edTw0FE6xnMKJIgTcTCgoYQ5ODa7QzzP2YT68V_EqqXk-d3o5yz-KVmjDtEntfcX7N4ba-VKbG1XRbqLhqb\",\"accessToken\":\"eyJhbGciOiJSUzI1NiIsImtpZCI6IjFjMzIxOTgzNGRhNTBlMjBmYWVhZWE3Yzg2Y2U3YjU1MzhmMTdiZTEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vdGVuZ2VmbG93IiwiYXVkIjoidGVuZ2VmbG93IiwiYXV0aF90aW1lIjoxNzY4ODIzNTc0LCJ1c2VyX2lkIjoicGpxQVBrQjZ2VlhVUDcyNHpoQWx5N0pzT2V5MSIsInN1YiI6InBqcUFQa0I2dlZYVVA3MjR6aEFseTdKc09leTEiLCJpYXQiOjE3Njg4MjM1NzQsImV4cCI6MTc2ODgyNzE3NCwiZW1haWwiOiJ0ZXN0bmV3bWFjb3NAbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsidGVzdG5ld21hY29zQG1haWwuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoicGFzc3dvcmQifX0.aPExpqnFtO6u5Fq-7Z8KCV8iixSp2_KQrIXGoduD6EQfFOg2qdsgT5UjKB4kIlLvM1JhpHXtVudFm2lOWOYtnDg41UMX5reD5nsIBXZvUvlQ7kgS3g11cFuVK3952JFbO0vwIn7eaw7XwaKXf3Hag2FLNwYD2nkGYnBdmf37CtZL6yDObxnWA_3tRo7X9SfXAMJfs-FjQLfN3q_1Kdhfr5QI_IzeQCUKLUHKrnonGjlndfyBHhhge_M2R3Gy3tUMJhxFUZPhQ2Bsam4AD5zj6rKqrzWMy8LwxeL5HTq1VV16jiznTnHPSdvA61cBzKor8nCRZEqhykyUyWiBAtQ39w\",\"expirationTime\":1768827174020},\"createdAt\":\"1768652180558\",\"lastLoginAt\":\"1768823499144\",\"apiKey\":\"AIzaSyDHuH4crihJVWZAIp-jknNNzVF34tGhvck\",\"appName\":\"[DEFAULT]\"}"
+        }
+      ]
+    }
+  ]
+}

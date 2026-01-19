@@ -6,6 +6,7 @@ import { signInWithPopup, signInWithEmailAndPassword, signOut } from 'firebase/a
 import { auth, googleProvider } from '../firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
+import { isValidEmail, checkPasswordStrength } from '../utils/validationUtils';
 
 export default function AuthForm() {
     const navigate = useNavigate();
@@ -34,23 +35,14 @@ export default function AuthForm() {
     });
 
     useEffect(() => {
-        setPasswordCriteria({
-            length: password.length >= 8,
-            upper: /[A-Z]/.test(password),
-            number: /[0-9]/.test(password),
-            special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
-        });
+        setPasswordCriteria(checkPasswordStrength(password));
     }, [password]);
 
     const isPasswordValid = Object.values(passwordCriteria).every(Boolean);
     const passwordStrength = Object.values(passwordCriteria).filter(Boolean).length;
 
-    // Strict Email Regex
-    const isValidEmail = (email) => {
-        // Enforce at least 2 characters for the domain name (e.g. 'gmail', 'yahoo')
-        // Bans '1@d.com' (1 char domain)
-        return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9-]{2,}\.[a-zA-Z]{2,}$/.test(email);
-    };
+    // Strict Email Regex - Now imported from validationUtils
+
 
     // Очистка полей когда пользователь выходит
     useEffect(() => {

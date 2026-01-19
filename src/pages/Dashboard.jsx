@@ -8,6 +8,7 @@ import FilterBar from '../components/FilterBar';
 import PeriodSelector from '../components/PeriodSelector';
 import { useNotification } from '../contexts/NotificationContext';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { formatCurrency, formatDate } from '../utils/formatUtils';
 
 export default function Dashboard() {
     const { showToast } = useNotification();
@@ -78,22 +79,6 @@ export default function Dashboard() {
             await deleteTransaction(id);
             showToast('Операция успешно удалена');
         }
-    };
-
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('ru-KZ', {
-            style: 'decimal',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount);
-    };
-
-    const formatDate = (date) => {
-        return new Intl.DateTimeFormat('ru-RU', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        }).format(date);
     };
 
     // Последние 5 транзакций

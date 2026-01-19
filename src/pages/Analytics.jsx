@@ -1,16 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, Tooltip as FlowbiteTooltip, Badge } from 'flowbite-react';
 import PeriodSelector from '../components/PeriodSelector';
-import {
-    PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip as RechartsTooltip,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
-} from 'recharts';
 import { Calculator, PieChart as PieChartIcon, BarChart3, Calendar, Info } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import { getTaxStats } from '../utils/taxUtils';
 import { useUserProfile } from '../hooks/useUserProfile';
+import { formatCurrency } from '../utils/formatUtils';
+import CategoryPieChart from '../components/charts/CategoryPieChart';
+import IncomeBarChart from '../components/charts/IncomeBarChart';
 
-const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1', '#14B8A6'];
+// Removed COLORS, moved to components
 
 export default function Analytics() {
     // const [period, setPeriod] = useState('month'); // Removed
@@ -22,7 +21,6 @@ export default function Analytics() {
     const [taxRate, setTaxRate] = useState(4); // Default visual 4, updates from profile
 
     useEffect(() => {
-        console.log('Analytics mounted');
         if (profile?.taxRate) {
             setTaxRate(profile.taxRate);
         }
@@ -64,13 +62,7 @@ export default function Analytics() {
         taxRate // Передаем ставку в хук для консистентности (хотя getTaxStats пересчитает)
     });
 
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('ru-KZ', {
-            style: 'decimal',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        }).format(amount);
-    };
+
 
     const netIncome = taxableIncome - tax;
 
@@ -151,9 +143,16 @@ export default function Analytics() {
                     <div className="p-2 bg-blue-100 rounded-lg">
                         <Calculator className="w-5 h-5 text-blue-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                        Налоговый монитор
-                    </h3>
+                    <div className="flex flex-col">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                            Налоговый монитор
+                        </h3>
+                        <div className="mt-1">
+                            <Badge color="blue" className="inline-flex">
+                                Упрощенная декларация (ИПН: {taxRate}%)
+                            </Badge>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -192,34 +191,8 @@ export default function Analytics() {
                         </div>
                     </div>
 
-                    <div className="h-[300px] w-full">
-                        {expenseData.length > 0 ? (
-                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={200}>
-                                <PieChart>
-                                    <Pie
-                                        data={expenseData}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {expenseData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsTooltip
-                                        formatter={(value) => `${formatCurrency(value)} ₸`}
-                                    />
-                                    <Legend />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-gray-500">
-                                Нет данных о расходах за этот период
-                            </div>
-                        )}
+                    <div className="w-full">
+                        <CategoryPieChart expenseData={expenseData} />
                     </div>
                 </Card>
 
@@ -234,41 +207,8 @@ export default function Analytics() {
                         </div>
                     </div>
 
-                    <div className="h-[300px] w-full">
-                        {trendData.length > 0 ? (
-                            <ResponsiveContainer width="99%" height="100%" minWidth={0} minHeight={0} debounce={200}>
-                                <BarChart
-                                    data={trendData}
-                                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                                >
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis
-                                        dataKey="name"
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#6B7280', fontSize: 12 }}
-                                        dy={10}
-                                    />
-                                    <YAxis
-                                        axisLine={false}
-                                        tickLine={false}
-                                        tick={{ fill: '#6B7280', fontSize: 12 }}
-                                        tickFormatter={(value) => `${value / 1000}k`}
-                                    />
-                                    <RechartsTooltip
-                                        formatter={(value) => `${formatCurrency(value)} ₸`}
-                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '20px' }} />
-                                    <Bar dataKey="income" name="Доход" fill="#10B981" radius={[4, 4, 0, 0]} />
-                                    <Bar dataKey="expense" name="Расход" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="flex h-full items-center justify-center text-gray-500">
-                                Нет данных за этот период
-                            </div>
-                        )}
+                    <div className="w-full">
+                        <IncomeBarChart trendData={trendData} />
                     </div>
                 </Card>
             </div>
@@ -291,7 +231,11 @@ export default function Analytics() {
                                 </div>
                             </div>
                         </div>
-                        <p className="text-xs text-gray-500">Расчет по ставке {taxRate}%</p>
+                        <div className="mt-1">
+                            <Badge color="indigo" className="inline-flex">
+                                Упрощенная декларация (ИПН: {taxRate}%)
+                            </Badge>
+                        </div>
                     </div>
                 </div>
 
