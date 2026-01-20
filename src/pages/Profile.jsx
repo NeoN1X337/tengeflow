@@ -1,5 +1,5 @@
 import { Card, Button, Label, TextInput } from 'flowbite-react';
-import { LogOut, User, Settings, Save } from 'lucide-react';
+import { LogOut, User, Settings, Save, Download } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useState, useEffect } from 'react';

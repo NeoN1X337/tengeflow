@@ -230,7 +230,7 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
 
         // Wait for rate update in UI
         await expect(page.getByText('Налог (5%)')).toBeVisible();
-        await expect(page.getByText('Расчет по ставке 5%')).toBeVisible();
+        await expect(page.getByText('Упрощенная декларация (ИПН: 5%)').first()).toBeVisible();
 
         // 4. Verify new calculation
         // Read Taxable Income
