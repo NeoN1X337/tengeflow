@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Card, Button, Badge } from 'flowbite-react';
-import { Plus, TrendingUp, Wallet, Calendar } from 'lucide-react';
+import { Card, Button } from 'flowbite-react';
+import { Plus, TrendingUp, Wallet } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import TransactionModal from '../components/TransactionModal';
 import TransactionItem from '../components/TransactionItem';

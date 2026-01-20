@@ -1,6 +1,6 @@
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 
-export default function Toast({ message, type = 'success', onClose, duration = 3500 }) {
+export default function Toast({ message, type = 'success', onClose, duration = 3500, onPause, onResume, isPaused }) {
     // Internal timeout logic moved to NotificationContext
     // Here we only handle the visual progress bar
 
@@ -26,7 +26,11 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
     const Icon = config.icon;
 
     return (
-        <div className="fixed top-4 left-4 right-4 md:left-auto md:right-4 z-50 max-w-md md:w-auto w-auto animate-slide-in-right">
+        <div
+            className="fixed top-4 left-4 right-4 md:left-auto md:right-4 z-50 max-w-md md:w-auto w-auto animate-slide-in-right"
+            onMouseEnter={onPause}
+            onMouseLeave={onResume}
+        >
             <div className={`${config.bg} ${config.border} border-2 md:border-4 rounded-lg shadow-2xl p-3 md:p-4 relative overflow-hidden`}>
                 <div className="flex items-start gap-2 md:gap-3 relative z-10">
                     <Icon className="w-5 h-5 md:w-6 md:h-6 text-white flex-shrink-0 mt-0.5 drop-shadow-lg" />
@@ -50,7 +54,9 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
                         <div
                             className="h-full bg-white/40 origin-left"
                             style={{
-                                animation: `progress ${duration}ms linear forwards`
+                                width: '100%',
+                                animation: `progress ${duration}ms linear forwards`,
+                                animationPlayState: isPaused ? 'paused' : 'running'
                             }}
                         />
                     </div>
@@ -58,8 +64,8 @@ export default function Toast({ message, type = 'success', onClose, duration = 3
             </div>
             <style>{`
                 @keyframes progress {
-                    from { width: 100%; }
-                    to { width: 0%; }
+                    from { transform: scaleX(1); }
+                    to { transform: scaleX(0); }
                 }
             `}</style>
         </div>

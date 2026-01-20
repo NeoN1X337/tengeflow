@@ -90,12 +90,25 @@ test.describe('Full Cycle E2E: Login -> Transaction -> Analytics', () => {
 
             // While there are transactions, delete them
             // Using a loop with count check
-            while ((await page.getByTitle('Удалить').count()) > 0) {
-                await page.getByTitle('Удалить').first().click();
+            // Strict cleanup: ensure we keep deleting until count is 0
+            let attempts = 0;
+            while ((await page.getByTitle('Удалить').count()) > 0 && attempts < 20) {
+                const deleteBtns = page.getByTitle('Удалить');
+                const count = await deleteBtns.count();
+                console.log(`Cleaning up year ${year}: found ${count} transactions`);
+
+                // Click all delete buttons in reverse order to avoid index shift issues (though UI might update)
+                // Actually safer to click first, wait, re-evaluate
+                await deleteBtns.first().click();
+
                 // Wait for the specific item to be removed or just wait a bit for firestore
                 // Ideally, we wait for count to decrease, but simple timeout is safer to avoid stale refs
                 await page.waitForTimeout(500);
+                attempts++;
             }
+
+            // Explicitly assert that cleanup was successful
+            await expect(page.getByTestId('transaction-amount')).toHaveCount(0);
         }
 
         // Return to dashboard

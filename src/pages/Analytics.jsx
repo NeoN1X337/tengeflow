@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Card, Tooltip as FlowbiteTooltip, Badge } from 'flowbite-react';
+import { Card, Badge } from 'flowbite-react';
 import PeriodSelector from '../components/PeriodSelector';
 import { Calculator, PieChart as PieChartIcon, BarChart3, Calendar, Info } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
@@ -191,7 +191,7 @@ export default function Analytics() {
                         </div>
                     </div>
 
-                    <div className="w-full">
+                    <div className="w-full min-h-[300px]">
                         <CategoryPieChart expenseData={expenseData} />
                     </div>
                 </Card>
@@ -207,7 +207,7 @@ export default function Analytics() {
                         </div>
                     </div>
 
-                    <div className="w-full">
+                    <div className="w-full min-h-[300px]">
                         <IncomeBarChart trendData={trendData} />
                     </div>
                 </Card>

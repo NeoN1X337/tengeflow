@@ -21,7 +21,7 @@ vi.mock('./firebase', () => ({
 }));
 
 describe('App Routing Protection', () => {
-    it('shows AuthForm when accessing /profile without user', () => {
+    it('shows AuthForm when accessing /profile without user', async () => {
         // Mock useAuth to return no user and not loading
         vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
             user: null,
@@ -37,7 +37,7 @@ describe('App Routing Protection', () => {
             </MemoryRouter>
         );
 
-        expect(screen.getByTestId('auth-form')).toBeInTheDocument();
+        expect(await screen.findByTestId('auth-form')).toBeInTheDocument();
         expect(screen.queryByTestId('profile-page')).not.toBeInTheDocument();
     });
 
