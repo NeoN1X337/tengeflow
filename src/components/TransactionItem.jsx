@@ -66,6 +66,7 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
                         onClick={() => onEdit(transaction)}
                         className="text-gray-400 hover:text-blue-600 transition-colors p-1"
                         title="Редактировать"
+                        aria-label="Редактировать транзакцию"
                     >
                         <Pencil className="w-4 h-4" />
                     </button>
@@ -73,6 +74,7 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
                         onClick={() => onDelete(transaction.id)}
                         className="text-gray-400 hover:text-red-600 transition-colors p-1"
                         title="Удалить"
+                        aria-label="Удалить транзакцию"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>

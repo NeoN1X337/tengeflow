@@ -7,6 +7,7 @@ import Transactions from './pages/Transactions';
 import Analytics from './pages/Analytics';
 import Profile from './pages/Profile';
 import VerifyEmail from './pages/VerifyEmail';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
     const { user, loading } = useAuth();
@@ -22,33 +23,35 @@ function App() {
         );
     }
 
-    if (!user) {
-        return (
-            <Routes>
-                <Route path="/verify-email" element={<Navigate to="/" replace />} />
-                <Route path="*" element={<AuthForm />} />
-            </Routes>
-        );
-    }
-
-    if (!user.emailVerified && !user.email?.includes('test')) {
-        return (
-            <Routes>
-                <Route path="/verify-email" element={<VerifyEmail />} />
-                <Route path="*" element={<Navigate to="/verify-email" replace />} />
-            </Routes>
-        );
-    }
+    // Helper to check email verification
+    const isVerified = user && (user.emailVerified || user.email?.includes('test'));
 
     return (
         <Routes>
-            <Route path="/" element={<MainLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="transactions" element={<Transactions />} />
-                <Route path="analytics" element={<Analytics />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
+            {/* Public/Root Handling */}
+            <Route path="/" element={
+                user ?
+                    (isVerified ? <MainLayout><Dashboard /></MainLayout> : <Navigate to="/verify-email" replace />)
+                    : <AuthForm />
+            } />
+
+            <Route path="/verify-email" element={
+                !user ? <Navigate to="/" replace /> :
+                    isVerified ? <Navigate to="/" replace /> :
+                        <VerifyEmail />
+            } />
+
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                    <Route path="/transactions" element={<Transactions />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/profile" element={<Profile />} />
+                </Route>
             </Route>
+
+            {/* Catch all */}
+            <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
     );
 }

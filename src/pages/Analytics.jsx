@@ -342,7 +342,7 @@ export default function Analytics() {
                 <div className="mt-2 p-4 bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl text-white">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <div>
-                            <p className="text-gray-400 text-sm">Итого за {selectedYear} год</p>
+                            <p className="text-gray-300 text-sm">Итого за {selectedYear} год</p>
                             <h4 className="text-2xl font-bold">Налоговая отчетность</h4>
                         </div>
                         <div className="flex gap-8 text-right">

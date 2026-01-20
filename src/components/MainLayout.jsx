@@ -2,7 +2,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNavBar from './BottomNavBar';
 
-export default function MainLayout() {
+export default function MainLayout({ children }) {
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
             {/* Desktop Sidebar */}
@@ -11,7 +11,7 @@ export default function MainLayout() {
             {/* Main Content */}
             <main className="md:ml-64 p-4 md:p-8 pb-20 md:pb-8">
                 <div className="max-w-7xl mx-auto">
-                    <Outlet />
+                    {children || <Outlet />}
                 </div>
             </main>
 

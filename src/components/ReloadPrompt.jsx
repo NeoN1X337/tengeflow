@@ -38,7 +38,7 @@ export default function ReloadPrompt() {
     };
 
     return (
-        <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-50 flex flex-col gap-2">
+        <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:bottom-4 md:w-96 z-50 flex flex-col gap-2">
             {/* Offline Notification */}
             {isOffline && (
                 <Toast className="bg-red-50 dark:bg-red-900 border border-red-200 dark:border-red-800">
