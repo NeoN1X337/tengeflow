@@ -5,6 +5,10 @@ import App from './App';
 import * as AuthContextModule from './contexts/AuthContext';
 
 // Mock components to avoid deep rendering issues and focus on routing
+vi.mock('./pages/LandingPage', () => ({
+    default: () => <div data-testid="landing-page">Landing Page Content</div>
+}));
+
 vi.mock('./components/AuthForm', () => ({
     default: () => <div data-testid="auth-form">AuthForm Content</div>
 }));
@@ -21,7 +25,7 @@ vi.mock('./firebase', () => ({
 }));
 
 describe('App Routing Protection', () => {
-    it('shows AuthForm when accessing /profile without user', async () => {
+    it('redirects to / (landing page) when accessing /profile without user', async () => {
         // Mock useAuth to return no user and not loading
         vi.spyOn(AuthContextModule, 'useAuth').mockReturnValue({
             user: null,
@@ -37,7 +41,8 @@ describe('App Routing Protection', () => {
             </MemoryRouter>
         );
 
-        expect(await screen.findByTestId('auth-form')).toBeInTheDocument();
+        // Should redirect to / (landing page) for unauthenticated users
+        expect(await screen.findByTestId('landing-page')).toBeInTheDocument();
         expect(screen.queryByTestId('profile-page')).not.toBeInTheDocument();
     });
 

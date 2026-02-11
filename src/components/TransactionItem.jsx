@@ -20,7 +20,7 @@ export default function TransactionItem({ transaction, onEdit, onDelete }) {
     const isIncome = transaction.type === 'income';
 
     return (
-        <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700 shadow-sm relative group">
+        <div className="flex items-center gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border border-gray-100 dark:border-gray-700 shadow-sm relative group">
 
             {/* 1. Type Icon (Leftmost) */}
             <div className={`p-2 rounded-full flex-shrink-0 ${isIncome ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>

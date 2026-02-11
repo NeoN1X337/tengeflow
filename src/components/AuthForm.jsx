@@ -8,11 +8,11 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { isValidEmail, checkPasswordStrength } from '../utils/validationUtils';
 
-export default function AuthForm() {
+export default function AuthForm({ mode = 'login' }) {
     const navigate = useNavigate();
     const { user, signup, resetPassword } = useAuth();
     const { showToast } = useNotification();
-    const [isLogin, setIsLogin] = useState(true);
+    const [isLogin, setIsLogin] = useState(mode === 'login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');

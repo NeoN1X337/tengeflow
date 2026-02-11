@@ -3,8 +3,11 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
+
 
 // Lazy Load Pages
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const AuthForm = lazy(() => import('./components/AuthForm'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Transactions = lazy(() => import('./pages/Transactions'));
@@ -33,34 +36,45 @@ function App() {
     const isVerified = user && (user.emailVerified || user.email?.includes('test'));
 
     return (
-        <Suspense fallback={<LoadingSpinner />}>
-            <Routes>
-                {/* Public/Root Handling */}
-                <Route path="/" element={
-                    user ?
-                        (isVerified ? <MainLayout><Dashboard /></MainLayout> : <Navigate to="/verify-email" replace />)
-                        : <AuthForm />
-                } />
+        <ErrorBoundary>
+            <Suspense fallback={<LoadingSpinner />}>
+                <Routes>
+                    {/* Public Routes */}
+                    <Route path="/" element={
+                        user ?
+                            (isVerified ? <Navigate to="/dashboard" replace /> : <Navigate to="/verify-email" replace />)
+                            : <LandingPage />
+                    } />
 
-                <Route path="/verify-email" element={
-                    !user ? <Navigate to="/" replace /> :
-                        isVerified ? <Navigate to="/" replace /> :
-                            <VerifyEmail />
-                } />
+                    <Route path="/login" element={
+                        user ? <Navigate to="/dashboard" replace /> : <AuthForm mode="login" />
+                    } />
 
-                {/* Protected Routes */}
-                <Route element={<ProtectedRoute />}>
-                    <Route element={<MainLayout />}>
-                        <Route path="/transactions" element={<Transactions />} />
-                        <Route path="/analytics" element={<Analytics />} />
-                        <Route path="/profile" element={<Profile />} />
+                    <Route path="/register" element={
+                        user ? <Navigate to="/dashboard" replace /> : <AuthForm mode="register" />
+                    } />
+
+                    <Route path="/verify-email" element={
+                        !user ? <Navigate to="/login" replace /> :
+                            isVerified ? <Navigate to="/dashboard" replace /> :
+                                <VerifyEmail />
+                    } />
+
+                    {/* Protected Routes */}
+                    <Route element={<ProtectedRoute />}>
+                        <Route element={<MainLayout />}>
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/transactions" element={<Transactions />} />
+                            <Route path="/analytics" element={<Analytics />} />
+                            <Route path="/profile" element={<Profile />} />
+                        </Route>
                     </Route>
-                </Route>
 
-                {/* Catch all */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </Suspense>
+                    {/* Catch all */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </Suspense>
+        </ErrorBoundary>
     );
 }
 

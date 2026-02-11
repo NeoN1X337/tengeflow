@@ -35,26 +35,32 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
         }
     }, [show, initialData]);
     const [error, setError] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Prevent double submission
+        if (isSubmitting) return;
+
         setError('');
-
-        if (!formData.amount || parseFloat(formData.amount) < 1) {
-            setError('Сумма должна быть не менее 1 ₸');
-            return;
-        }
-
-        const selectedDate = new Date(formData.date);
-        const today = new Date();
-        today.setHours(23, 59, 59, 999); // Allow today until end of day
-
-        if (selectedDate > today) {
-            setError('Будущие даты недоступны');
-            return;
-        }
+        setIsSubmitting(true);
 
         try {
+            if (!formData.amount || parseFloat(formData.amount) < 1) {
+                setError('Сумма должна быть не менее 1 ₸');
+                return;
+            }
+
+            const selectedDate = new Date(formData.date);
+            const today = new Date();
+            today.setHours(23, 59, 59, 999); // Allow today until end of day
+
+            if (selectedDate > today) {
+                setError('Будущие даты недоступны');
+                return;
+            }
+
             await onSave({
                 ...formData,
                 amount: parseFloat(formData.amount),
@@ -90,6 +96,8 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
         } catch (err) {
             setError('Ошибка при сохранении. Попробуйте снова.');
             console.error(err);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -230,11 +238,16 @@ export default function TransactionModal({ show, onClose, onSave, initialData = 
                             </Button>
                             <Button
                                 type="submit"
-                                className="px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                                disabled={isSubmitting}
+                                className={`px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+                                    }`}
                                 data-testid="save-button"
                             >
                                 <span className="text-white font-semibold">
-                                    {initialData ? 'Сохранить изменения' : 'Сохранить'}
+                                    {isSubmitting
+                                        ? 'Загрузка...'
+                                        : (initialData ? 'Сохранить изменения' : 'Сохранить')
+                                    }
                                 </span>
                             </Button>
                         </div>
