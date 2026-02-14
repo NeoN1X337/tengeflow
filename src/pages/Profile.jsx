@@ -1,5 +1,5 @@
 import { Card, Button, Label, TextInput } from 'flowbite-react';
-import { LogOut, User, Settings, Save, Download } from 'lucide-react';
+import { LogOut, User, Settings, Save, Briefcase, Users } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { useState, useEffect } from 'react';
@@ -12,6 +12,7 @@ export default function Profile() {
 
     const [taxRate, setTaxRate] = useState(4);
     const [saving, setSaving] = useState(false);
+    const [togglingMode, setTogglingMode] = useState(false);
 
     useEffect(() => {
         if (profile?.taxRate) {
@@ -31,6 +32,22 @@ export default function Profile() {
         }
     };
 
+    const handleToggleMode = async () => {
+        const newValue = !isBusiness;
+        setTogglingMode(true);
+        try {
+            await updateProfile({ isBusinessMode: newValue });
+            showToast(
+                newValue ? 'Бизнес-режим включён' : 'Личный режим включён',
+                'success'
+            );
+        } catch (error) {
+            showToast('Ошибка при переключении режима', 'error');
+        } finally {
+            setTogglingMode(false);
+        }
+    };
+
     const handleLogout = async () => {
         try {
             await logout();
@@ -38,6 +55,8 @@ export default function Profile() {
             console.error('Ошибка выхода:', error);
         }
     };
+
+    const isBusiness = profile?.isBusinessMode === true;
 
     return (
         <div className="space-y-6">
@@ -58,43 +77,95 @@ export default function Profile() {
                 </div>
 
                 <div className="space-y-6">
-                    {/* Настройки ИП */}
+                    {/* Mode Switcher */}
                     <div>
                         <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Settings className="w-5 h-5" />
-                            Настройки ИП
+                            {isBusiness ? (
+                                <Briefcase className="w-5 h-5 text-indigo-600" />
+                            ) : (
+                                <Users className="w-5 h-5 text-blue-600" />
+                            )}
+                            Режим приложения
                         </h4>
 
-                        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                            <div className="mb-2 block">
-                                <Label htmlFor="tax-rate" value="Текущая ставка налога (%)" />
-                            </div>
-                            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center max-w-md">
-                                <TextInput
-                                    id="tax-rate"
-                                    type="number"
-                                    step="0.1"
-                                    value={taxRate}
-                                    onChange={(e) => setTaxRate(e.target.value)}
-                                    disabled={loading || saving}
-                                    required
-                                    className="w-full sm:w-32"
-                                />
-                                <Button
-                                    onClick={handleSaveTaxRate}
-                                    isProcessing={saving}
-                                    disabled={loading || saving}
-                                    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-0 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5"
+                        <div className={`p-4 rounded-lg border-2 transition-colors ${isBusiness
+                                ? 'bg-indigo-50 border-indigo-200'
+                                : 'bg-blue-50 border-blue-200'
+                            }`}>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="font-semibold text-gray-900">
+                                        {isBusiness ? 'Бизнес + Личное (ИП)' : 'Личный бюджет'}
+                                    </p>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        {isBusiness
+                                            ? 'Налоги, обязательные платежи, дедлайны + личные финансы'
+                                            : 'Учёт доходов, расходов и аналитика'
+                                        }
+                                    </p>
+                                </div>
+
+                                {/* Custom Toggle Switch */}
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={isBusiness}
+                                    disabled={togglingMode || loading}
+                                    onClick={handleToggleMode}
+                                    className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${isBusiness ? 'bg-indigo-600' : 'bg-gray-300'
+                                        }`}
                                 >
-                                    <Save className="w-4 h-4 mr-2" />
-                                    Сохранить ставку
-                                </Button>
+                                    <span
+                                        className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${isBusiness ? 'translate-x-7' : 'translate-x-0'
+                                            }`}
+                                    />
+                                </button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">
-                                Используется для автоматического расчета налогов в аналитике и мониторе.
+                            <p className="text-xs text-gray-500 mt-3">
+                                {isBusiness ? '🏢 Бизнес-режим' : '👤 Личный режим'} • Переключите для смены
                             </p>
                         </div>
                     </div>
+
+                    {/* Настройки ИП — visible only in business mode */}
+                    {isBusiness && (
+                        <div>
+                            <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Settings className="w-5 h-5" />
+                                Настройки ИП
+                            </h4>
+
+                            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                <div className="mb-2 block">
+                                    <Label htmlFor="tax-rate" value="Текущая ставка налога (%)" />
+                                </div>
+                                <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center max-w-md">
+                                    <TextInput
+                                        id="tax-rate"
+                                        type="number"
+                                        step="0.1"
+                                        value={taxRate}
+                                        onChange={(e) => setTaxRate(e.target.value)}
+                                        disabled={loading || saving}
+                                        required
+                                        className="w-full sm:w-32"
+                                    />
+                                    <Button
+                                        onClick={handleSaveTaxRate}
+                                        isProcessing={saving}
+                                        disabled={loading || saving}
+                                        className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 border-0 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5"
+                                    >
+                                        <Save className="w-4 h-4 mr-2" />
+                                        Сохранить ставку
+                                    </Button>
+                                </div>
+                                <p className="text-xs text-gray-500 mt-2">
+                                    Используется для автоматического расчета налогов в аналитике и мониторе.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="pt-4 border-t border-gray-200">
                         <Button

@@ -5,10 +5,10 @@ import MainLayout from './components/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
-
 // Lazy Load Pages
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const AuthForm = lazy(() => import('./components/AuthForm'));
+const OnboardingScreen = lazy(() => import('./pages/OnboardingScreen'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Transactions = lazy(() => import('./pages/Transactions'));
 const Analytics = lazy(() => import('./pages/Analytics'));
@@ -60,8 +60,11 @@ function App() {
                                 <VerifyEmail />
                     } />
 
-                    {/* Protected Routes */}
+                    {/* Protected Routes (ProtectedRoute handles onboarding redirect) */}
                     <Route element={<ProtectedRoute />}>
+                        {/* Onboarding — inside ProtectedRoute but outside MainLayout */}
+                        <Route path="/onboarding" element={<OnboardingScreen />} />
+
                         <Route element={<MainLayout />}>
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/transactions" element={<Transactions />} />

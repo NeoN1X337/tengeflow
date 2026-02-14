@@ -1,10 +1,13 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useUserProfile } from '../hooks/useUserProfile';
 
 export default function ProtectedRoute() {
-    const { user, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const { profile, loading: profileLoading } = useUserProfile();
+    const location = useLocation();
 
-    if (loading) {
+    if (authLoading || profileLoading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
                 <div className="text-center">
@@ -21,6 +24,11 @@ export default function ProtectedRoute() {
 
     if (!user.emailVerified && !user.email?.includes('test')) {
         return <Navigate to="/verify-email" replace />;
+    }
+
+    // Force onboarding for users who haven't completed it
+    if (!profile.onboardingComplete && location.pathname !== '/onboarding') {
+        return <Navigate to="/onboarding" replace />;
     }
 
     return <Outlet />;

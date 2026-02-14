@@ -3,6 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi, describe, it, expect } from 'vitest';
 import App from './App';
 import * as AuthContextModule from './contexts/AuthContext';
+import * as UserProfileModule from './hooks/useUserProfile';
 
 // Mock components to avoid deep rendering issues and focus on routing
 vi.mock('./pages/LandingPage', () => ({
@@ -35,6 +36,12 @@ describe('App Routing Protection', () => {
             resetPassword: vi.fn()
         });
 
+        vi.spyOn(UserProfileModule, 'useUserProfile').mockReturnValue({
+            profile: { onboardingComplete: true, isBusinessMode: false },
+            loading: false,
+            updateProfile: vi.fn()
+        });
+
         render(
             <MemoryRouter initialEntries={['/profile']}>
                 <App />
@@ -53,6 +60,12 @@ describe('App Routing Protection', () => {
             signup: vi.fn(),
             logout: vi.fn(),
             resetPassword: vi.fn()
+        });
+
+        vi.spyOn(UserProfileModule, 'useUserProfile').mockReturnValue({
+            profile: { onboardingComplete: true, isBusinessMode: false },
+            loading: false,
+            updateProfile: vi.fn()
         });
 
         render(

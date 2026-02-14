@@ -1,3 +1,7 @@
+// ─── Re-export модуля «Умный расчет налогов» ────────────────────────────────
+export { calculateMonthlyObligations, TAX_CONSTANTS_2026 } from './taxCalculator';
+export type { TaxCalculationInput, TaxCalculationResult, PaymentLine } from './taxCalculator';
+
 /**
  * Transaction interface matching the shape used in the app
  */

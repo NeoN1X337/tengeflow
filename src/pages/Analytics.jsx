@@ -19,6 +19,7 @@ export default function Analytics() {
     // Получаем ставку налога из профиля
     const { profile } = useUserProfile();
     const [taxRate, setTaxRate] = useState(4); // Default visual 4, updates from profile
+    const isBusiness = profile?.isBusinessMode === true;
 
     useEffect(() => {
         if (profile?.taxRate) {
@@ -51,7 +52,7 @@ export default function Analytics() {
         taxRate // Передаем ставку в хук
     });
 
-    // Отдельный запрос для Налогового Календаря (весь выбранный год)
+    // Отдельный запрос для Налогового Календаря (весь выбранный год) — only in business mode
     const yearDateRange = useMemo(() => ({
         start: new Date(selectedYear, 0, 1),
         end: new Date(selectedYear, 11, 31, 23, 59, 59)
@@ -59,7 +60,7 @@ export default function Analytics() {
 
     const { transactions: yearTransactions } = useTransactions({
         dateRange: yearDateRange,
-        taxRate // Передаем ставку в хук для консистентности (хотя getTaxStats пересчитает)
+        taxRate
     });
 
 
@@ -137,47 +138,49 @@ export default function Analytics() {
                 />
             </div>
 
-            {/* Налоговый калькулятор */}
-            <Card className="shadow-lg border-t-4 border-t-blue-600">
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="p-2 bg-blue-100 rounded-lg">
-                        <Calculator className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div className="flex flex-col">
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                            Налоговый монитор
-                        </h3>
-                        <div className="mt-1">
-                            <Badge color="blue" className="inline-flex">
-                                Упрощенная декларация (ИПН: {taxRate}%)
-                            </Badge>
+            {/* Налоговый калькулятор — only in business mode */}
+            {isBusiness && (
+                <Card className="shadow-lg border-t-4 border-t-blue-600">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-blue-100 rounded-lg">
+                            <Calculator className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div className="flex flex-col">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                Налоговый монитор
+                            </h3>
+                            <div className="mt-1">
+                                <Badge color="blue" className="inline-flex">
+                                    Упрощенная декларация (ИПН: {taxRate}%)
+                                </Badge>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Налогооблагаемый доход</p>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                            {formatCurrency(displayTaxableIncome)} ₸
-                        </p>
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Налогооблагаемый доход</p>
+                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                                {formatCurrency(displayTaxableIncome)} ₸
+                            </p>
+                        </div>
 
-                    <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                        <p className="text-sm text-red-600 dark:text-red-400 mb-1">Налог ({taxRate}%)</p>
-                        <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="tax-monitor-amount">
-                            {formatCurrency(displayTax)} ₸
-                        </p>
-                    </div>
+                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                            <p className="text-sm text-red-600 dark:text-red-400 mb-1">Налог ({taxRate}%)</p>
+                            <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="tax-monitor-amount">
+                                {formatCurrency(displayTax)} ₸
+                            </p>
+                        </div>
 
-                    <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                        <p className="text-sm text-green-600 dark:text-green-400 mb-1">Чистый доход</p>
-                        <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                            {formatCurrency(displayNetIncome)} ₸
-                        </p>
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                            <p className="text-sm text-green-600 dark:text-green-400 mb-1">Чистый доход</p>
+                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                {formatCurrency(displayNetIncome)} ₸
+                            </p>
+                        </div>
                     </div>
-                </div>
-            </Card>
+                </Card>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Расходы по категориям (PieChart) */}
@@ -213,151 +216,153 @@ export default function Analytics() {
                 </Card>
             </div>
 
-            {/* Налоговый Календарь 2026 */}
-            <Card className="shadow-lg border-t-4 border-t-emerald-600">
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="p-2 bg-emerald-100 rounded-lg">
-                        <Calendar className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Налоговый календарь {selectedYear}
-                            </h3>
-                            <div className="group relative">
-                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                                <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10 text-center">
-                                    Сумма рассчитана автоматически. Пожалуйста, проверяйте актуальные ставки в кабинете налогоплательщика РК
+            {/* Налоговый Календарь — only in business mode */}
+            {isBusiness && (
+                <Card className="shadow-lg border-t-4 border-t-emerald-600">
+                    <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 bg-emerald-100 rounded-lg">
+                            <Calendar className="w-5 h-5 text-emerald-600" />
+                        </div>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                                    Налоговый календарь {selectedYear}
+                                </h3>
+                                <div className="group relative">
+                                    <Info className="w-4 h-4 text-gray-400 cursor-help" />
+                                    <div className="absolute left-1/2 bottom-full mb-2 -translate-x-1/2 hidden group-hover:block w-64 p-2 bg-gray-900 text-white text-xs rounded shadow-lg z-10 text-center">
+                                        Сумма рассчитана автоматически. Пожалуйста, проверяйте актуальные ставки в кабинете налогоплательщика РК
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="mt-1">
-                            <Badge color="indigo" className="inline-flex">
-                                Упрощенная декларация (ИПН: {taxRate}%)
-                            </Badge>
+                            <div className="mt-1">
+                                <Badge color="indigo" className="inline-flex">
+                                    Упрощенная декларация (ИПН: {taxRate}%)
+                                </Badge>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Кварталы */}
-                    {['q1', 'q2', 'q3', 'q4'].map((q, idx) => (
-                        <div key={q} className={`p-3 rounded-lg border ${taxStats[q].containerClass}`}>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Кварталы */}
+                        {['q1', 'q2', 'q3', 'q4'].map((q, idx) => (
+                            <div key={q} className={`p-3 rounded-lg border ${taxStats[q].containerClass}`}>
+                                <div className="flex justify-between items-start mb-2">
+                                    <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Q{idx + 1}</span>
+                                    <span className={`text-xs px-2 py-0.5 rounded-full ${taxStats[q].containerClass.includes('emerald') ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'} dark:bg-gray-600 dark:text-gray-300`}>
+                                        {taxStats[q].status}
+                                    </span>
+                                </div>
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500 font-medium">Доход:</span>
+                                        <span className="text-emerald-600 font-bold">{formatCurrency(taxStats[q].income)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-gray-500 font-medium">Налог:</span>
+                                        <span className="text-orange-600 font-bold" data-testid={`tax-${q}`}>{formatCurrency(taxStats[q].tax)}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Полугодия */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                        {/* 1 полугодие */}
+                        <div className={`p-4 rounded-xl border ${taxStats.h1.containerClass}`}>
                             <div className="flex justify-between items-start mb-2">
-                                <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Q{idx + 1}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded-full ${taxStats[q].containerClass.includes('emerald') ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'} dark:bg-gray-600 dark:text-gray-300`}>
-                                    {taxStats[q].status}
-                                </span>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    1 полугодие
+                                </h4>
+                                <Badge color={['Текущий квартал', 'В процессе накопления', 'Активный период'].includes(taxStats.h1.status) ? 'info' : (taxStats.h1.status === 'Завершено' ? 'gray' : 'blue')}>
+                                    {taxStats.h1.status}
+                                </Badge>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 mb-3">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500 font-medium">Доход:</span>
-                                    <span className="text-emerald-600 font-bold">{formatCurrency(taxStats[q].income)}</span>
+                                    <span className="text-gray-500">Доход:</span>
+                                    <span className="font-medium">{formatCurrency(taxStats.h1.income)} ₸</span>
                                 </div>
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500 font-medium">Налог:</span>
-                                    <span className="text-orange-600 font-bold" data-testid={`tax-${q}`}>{formatCurrency(taxStats[q].tax)}</span>
+                                    <span className="text-gray-500">Налог:</span>
+                                    <span className="font-medium text-red-600 dark:text-red-400" data-testid="tax-h1">
+                                        {formatCurrency(taxStats.h1.tax)} ₸
+                                    </span>
                                 </div>
                             </div>
+                            {taxStats.h1.deadlines && (
+                                <div className="mt-3 pt-2 border-t border-gray-200/50 text-xs flex flex-col gap-1">
+                                    <div className={`flex items-center gap-1 ${taxStats.h1.deadlines.ui.submission.color}`}>
+                                        <span>{taxStats.h1.deadlines.ui.submission.icon}</span>
+                                        <span>Сдача до {taxStats.h1.deadlines.submission}</span>
+                                    </div>
+                                    <div className={`flex items-center gap-1 ${taxStats.h1.deadlines.ui.payment.color}`}>
+                                        <span>{taxStats.h1.deadlines.ui.payment.icon}</span>
+                                        <span>Оплата до {taxStats.h1.deadlines.payment}</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                    ))}
-                </div>
 
-                {/* Полугодия */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    {/* 1 полугодие */}
-                    <div className={`p-4 rounded-xl border ${taxStats.h1.containerClass}`}>
-                        <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                1 полугодие
-                            </h4>
-                            <Badge color={['Текущий квартал', 'В процессе накопления', 'Активный период'].includes(taxStats.h1.status) ? 'info' : (taxStats.h1.status === 'Завершено' ? 'gray' : 'blue')}>
-                                {taxStats.h1.status}
-                            </Badge>
-                        </div>
-                        <div className="space-y-1 mb-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Доход:</span>
-                                <span className="font-medium">{formatCurrency(taxStats.h1.income)} ₸</span>
+                        {/* 2 полугодие */}
+                        <div className={`p-4 rounded-xl border ${taxStats.h2.containerClass}`}>
+                            <div className="flex justify-between items-start mb-2">
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    2 полугодие
+                                </h4>
+                                <Badge color={['Текущий квартал', 'В процессе накопления', 'Активный период'].includes(taxStats.h2.status) ? 'info' : (taxStats.h2.status === 'Завершено' ? 'gray' : 'blue')}>
+                                    {taxStats.h2.status}
+                                </Badge>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Налог:</span>
-                                <span className="font-medium text-red-600 dark:text-red-400" data-testid="tax-h1">
-                                    {formatCurrency(taxStats.h1.tax)} ₸
-                                </span>
-                            </div>
-                        </div>
-                        {taxStats.h1.deadlines && (
-                            <div className="mt-3 pt-2 border-t border-gray-200/50 text-xs flex flex-col gap-1">
-                                <div className={`flex items-center gap-1 ${taxStats.h1.deadlines.ui.submission.color}`}>
-                                    <span>{taxStats.h1.deadlines.ui.submission.icon}</span>
-                                    <span>Сдача до {taxStats.h1.deadlines.submission}</span>
+                            <div className="space-y-1 mb-3">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Доход:</span>
+                                    <span className="font-medium">{formatCurrency(taxStats.h2.income)} ₸</span>
                                 </div>
-                                <div className={`flex items-center gap-1 ${taxStats.h1.deadlines.ui.payment.color}`}>
-                                    <span>{taxStats.h1.deadlines.ui.payment.icon}</span>
-                                    <span>Оплата до {taxStats.h1.deadlines.payment}</span>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-gray-500">Налог:</span>
+                                    <span className="font-medium text-red-600 dark:text-red-400" data-testid="tax-h2">
+                                        {formatCurrency(taxStats.h2.tax)} ₸
+                                    </span>
                                 </div>
                             </div>
-                        )}
+                            {taxStats.h2.deadlines && (
+                                <div className="mt-3 pt-2 border-t border-gray-200/50 text-xs flex flex-col gap-1">
+                                    <div className={`flex items-center gap-1 ${taxStats.h2.deadlines.ui.submission.color}`}>
+                                        <span>{taxStats.h2.deadlines.ui.submission.icon}</span>
+                                        <span>Сдача до {taxStats.h2.deadlines.submission}</span>
+                                    </div>
+                                    <div className={`flex items-center gap-1 ${taxStats.h2.deadlines.ui.payment.color}`}>
+                                        <span>{taxStats.h2.deadlines.ui.payment.icon}</span>
+                                        <span>Оплата до {taxStats.h2.deadlines.payment}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* 2 полугодие */}
-                    <div className={`p-4 rounded-xl border ${taxStats.h2.containerClass}`}>
-                        <div className="flex justify-between items-start mb-2">
-                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">
-                                2 полугодие
-                            </h4>
-                            <Badge color={['Текущий квартал', 'В процессе накопления', 'Активный период'].includes(taxStats.h2.status) ? 'info' : (taxStats.h2.status === 'Завершено' ? 'gray' : 'blue')}>
-                                {taxStats.h2.status}
-                            </Badge>
-                        </div>
-                        <div className="space-y-1 mb-3">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Доход:</span>
-                                <span className="font-medium">{formatCurrency(taxStats.h2.income)} ₸</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-gray-500">Налог:</span>
-                                <span className="font-medium text-red-600 dark:text-red-400" data-testid="tax-h2">
-                                    {formatCurrency(taxStats.h2.tax)} ₸
-                                </span>
-                            </div>
-                        </div>
-                        {taxStats.h2.deadlines && (
-                            <div className="mt-3 pt-2 border-t border-gray-200/50 text-xs flex flex-col gap-1">
-                                <div className={`flex items-center gap-1 ${taxStats.h2.deadlines.ui.submission.color}`}>
-                                    <span>{taxStats.h2.deadlines.ui.submission.icon}</span>
-                                    <span>Сдача до {taxStats.h2.deadlines.submission}</span>
-                                </div>
-                                <div className={`flex items-center gap-1 ${taxStats.h2.deadlines.ui.payment.color}`}>
-                                    <span>{taxStats.h2.deadlines.ui.payment.icon}</span>
-                                    <span>Оплата до {taxStats.h2.deadlines.payment}</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Итого за год */}
-                <div className="mt-2 p-4 bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl text-white">
-                    <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-                        <div>
-                            <p className="text-gray-300 text-sm">Итого за {selectedYear} год</p>
-                            <h4 className="text-2xl font-bold">Налоговая отчетность</h4>
-                        </div>
-                        <div className="flex gap-8 text-right">
+                    {/* Итого за год */}
+                    <div className="mt-2 p-4 bg-gradient-to-r from-gray-900 to-gray-800 rounded-xl text-white">
+                        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                             <div>
-                                <p className="text-gray-400 text-xs uppercase">Общий доход</p>
-                                <p className="text-xl font-bold text-emerald-400">{formatCurrency(taxStats.year.income)} ₸</p>
+                                <p className="text-gray-300 text-sm">Итого за {selectedYear} год</p>
+                                <h4 className="text-2xl font-bold">Налоговая отчетность</h4>
                             </div>
-                            <div>
-                                <p className="text-gray-400 text-xs uppercase">К уплате</p>
-                                <p className="text-xl font-bold text-orange-400" data-testid="tax-year">{formatCurrency(taxStats.year.tax)} ₸</p>
+                            <div className="flex gap-8 text-right">
+                                <div>
+                                    <p className="text-gray-400 text-xs uppercase">Общий доход</p>
+                                    <p className="text-xl font-bold text-emerald-400">{formatCurrency(taxStats.year.income)} ₸</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-400 text-xs uppercase">К уплате</p>
+                                    <p className="text-xl font-bold text-orange-400" data-testid="tax-year">{formatCurrency(taxStats.year.tax)} ₸</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </Card>
+                </Card>
+            )}
         </div>
     );
 }
