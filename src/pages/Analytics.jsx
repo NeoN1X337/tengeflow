@@ -140,6 +140,9 @@ export default function Analytics() {
                     businessIncome={businessIncome}
                     otherTaxableIncome={otherTaxableIncome}
                     taxRate={taxRate}
+                    bornAfter1975={profile?.bornAfter1975 ?? true}
+                    hasEmployees={profile?.hasEmployees ?? false}
+                    totalEmployeeSalary={profile?.totalEmployeeSalary ?? 0}
                 />
             )}
 

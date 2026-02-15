@@ -16,20 +16,20 @@ describe('taxCalculator', () => {
             customTaxRate: 3,
         });
 
-        // ОПВ = 500 000 × 10% = 50 000
+        // ОПВ = max(500 000, 85 000) × 10% = 500 000 × 10% = 50 000
         expect(result.monthly.opv.amount).toBe(50_000);
 
-        // СО = 1 МЗП × 5% = 85 000 × 5% = 4 250 (фиксированная)
-        expect(result.monthly.so.amount).toBe(4_250);
+        // СО = min(max(500 000, 85 000), 7*85 000) × 5% = min(500 000, 595 000) × 5% = 500 000 × 5% = 25 000
+        expect(result.monthly.so.amount).toBe(25_000);
 
         // ВОСМС = 1.4 × 85 000 × 5% = 119 000 × 5% = 5 950
         expect(result.monthly.vosms.amount).toBe(5_950);
 
-        // ОПВР = 1 МЗП × 3.5% = 85 000 × 3.5% = 2 975 (фиксированная)
+        // ОПВР = 1 МЗП × 3.5% = 85 000 × 3.5% = 2 975 (bornAfter1975 default = true)
         expect(result.monthly.opvr.amount).toBe(2_975);
 
-        // totalMonthly = 50 000 + 4 250 + 5 950 + 2 975 = 63 175
-        expect(result.monthly.totalMonthly).toBe(63_175);
+        // totalMonthly = 50 000 + 25 000 + 5 950 + 2 975 = 83 925
+        expect(result.monthly.totalMonthly).toBe(83_925);
 
         // Налог (упрощёнка): 500 000 × 3% = 15 000
         expect(result.tax.totalTax).toBe(15_000);
@@ -38,23 +38,23 @@ describe('taxCalculator', () => {
         // ИПН = 50% от 15 000 = 7 500
         expect(result.tax.ipn.amount).toBe(7_500);
 
-        // СоцНалог = 50% от 15 000 − СО(4 250) = 7 500 − 4 250 = 3 250
-        expect(result.tax.socialTax.amount).toBe(3_250);
+        // СоцНалог = 50% от 15 000 − СО(25 000) = max(7 500 − 25 000, 0) = 0
+        expect(result.tax.socialTax.amount).toBe(0);
 
-        // Net income = 500 000 − (63 175 + 15 000) = 421 825
-        expect(result.summary.netIncome).toBe(421_825);
+        // Net income = 500 000 − (83 925 + 15 000) = 401 075
+        expect(result.summary.netIncome).toBe(401_075);
     });
 
     // ───── Низкий доход (ниже МЗП) — пример из ТЗ: 50 000 ₸ ─────────────────
 
-    it('при доходе 50 000 ₸ (ниже МЗП) корректно рассчитывает 18 175 ₸', () => {
+    it('при доходе 50 000 ₸ (ниже МЗП) корректно рассчитывает обязательства', () => {
         const result = calculateMonthlyObligations({
             monthlyIncome: 50_000,
             customTaxRate: 4,
         });
 
-        // ОПВ = 50 000 × 10% = 5 000 (от фактического дохода, не от МЗП)
-        expect(result.monthly.opv.amount).toBe(5_000);
+        // ОПВ = max(50 000, 85 000) × 10% = 85 000 × 10% = 8 500 (мин. 1 МЗП)
+        expect(result.monthly.opv.amount).toBe(8_500);
 
         // ОПВР = 85 000 × 3.5% = 2 975 (фиксированная от МЗП)
         expect(result.monthly.opvr.amount).toBe(2_975);
@@ -62,11 +62,11 @@ describe('taxCalculator', () => {
         // ВОСМС = 5 950 (фиксированная)
         expect(result.monthly.vosms.amount).toBe(5_950);
 
-        // СО = 85 000 × 5% = 4 250 (фиксированная от МЗП)
+        // СО = min(max(50 000, 85 000), 595 000) × 5% = 85 000 × 5% = 4 250
         expect(result.monthly.so.amount).toBe(4_250);
 
-        // Итого ежемесячных = 5 000 + 4 250 + 5 950 + 2 975 = 18 175
-        expect(result.monthly.totalMonthly).toBe(18_175);
+        // Итого ежемесячных = 8 500 + 4 250 + 5 950 + 2 975 = 21 675
+        expect(result.monthly.totalMonthly).toBe(21_675);
 
         // ИПН = 50 000 × 4% = 2 000
         expect(result.tax.ipn.amount).toBe(2_000);
@@ -83,7 +83,7 @@ describe('taxCalculator', () => {
         // ОПВ = 0 (при нулевом доходе = 0)
         expect(result.monthly.opv.amount).toBe(0);
 
-        // СО = 4 250 (фиксированная от МЗП)
+        // СО = min(max(0→85000, 85000), 595000) × 5% = 85 000 × 5% = 4 250
         expect(result.monthly.so.amount).toBe(4_250);
 
         // ВОСМС — фиксированно 5 950
@@ -114,8 +114,8 @@ describe('taxCalculator', () => {
 
         expect(result.monthly.opv.amount).toBe(0);
 
-        // СО = 4 250 (фиксированная, не зависит от ОПВ)
-        expect(result.monthly.so.amount).toBe(4_250);
+        // СО = min(max(300 000, 85 000), 595 000) × 5% = 300 000 × 5% = 15 000
+        expect(result.monthly.so.amount).toBe(15_000);
 
         // ВОСМС — фиксированно
         expect(result.monthly.vosms.amount).toBe(5_950);
@@ -156,8 +156,8 @@ describe('taxCalculator', () => {
         const maxOPV = C.OPV_MAX_MZP * C.MZP * C.OPV_RATE;
         expect(result.monthly.opv.amount).toBe(maxOPV);
 
-        // СО = 4 250 (фиксированная от МЗП, не зависит от дохода)
-        expect(result.monthly.so.amount).toBe(4_250);
+        // СО = min(5 000 000, 7*85 000) × 5% = 595 000 × 5% = 29 750
+        expect(result.monthly.so.amount).toBe(29_750);
     });
 
     // ───── Розничный налог (4%) ───────────────────────────────────────────────
@@ -193,9 +193,9 @@ describe('taxCalculator', () => {
         // ИПН = 50% от 30 000 = 15 000
         expect(result.tax.ipn.amount).toBe(15_000);
 
-        // СО (фиксированная) = 4 250
-        // СоцНалог = max(15 000 − 4 250, 0) = 10 750
-        expect(result.tax.socialTax.amount).toBe(10_750);
+        // СО = min(1 000 000, 595 000) × 5% = 595 000 × 5% = 29 750
+        // СоцНалог = max(15 000 − 29 750, 0) = 0
+        expect(result.tax.socialTax.amount).toBe(0);
     });
 
     // ───── Упрощёнка: СоцНалог при инвалидности ──────────────────────────────
@@ -230,6 +230,11 @@ describe('taxCalculator', () => {
         expect(result).toHaveProperty('tooltips');
         expect(result).toHaveProperty('allPayments');
 
+        // Проверяем input новые поля
+        expect(result.input).toHaveProperty('bornAfter1975');
+        expect(result.input).toHaveProperty('hasEmployees');
+        expect(result.input).toHaveProperty('totalEmployeeSalary');
+
         // Проверяем monthly
         expect(result.monthly).toHaveProperty('opv');
         expect(result.monthly).toHaveProperty('so');
@@ -251,8 +256,12 @@ describe('taxCalculator', () => {
         expect(result.tooltips[0]).toContain('ОПВ');
         expect(result.tooltips[2]).toContain('ВОСМС');
 
-        // Проверяем taxReserve
+        // Проверяем summary новые поля
         expect(result.summary).toHaveProperty('taxReserve');
+        expect(result.summary).toHaveProperty('totalToPay');
+
+        // Без сотрудников — employeeObligations undefined
+        expect(result.employeeObligations).toBeUndefined();
     });
 
     // ───── Константы 2026 ─────────────────────────────────────────────────────
@@ -264,6 +273,10 @@ describe('taxCalculator', () => {
         expect(C.SO_RATE).toBe(0.05);
         expect(C.VOSMS_RATE).toBe(0.05);
         expect(C.OPVR_RATE).toBe(0.035);
+        expect(C.SO_MAX_MZP).toBe(7);
+        expect(C.EMPLOYEE_IPN_RATE).toBe(0.10);
+        expect(C.EMPLOYEE_OSMS_RATE).toBe(0.03);
+        expect(C.EMPLOYEE_VOSMS_RATE).toBe(0.02);
     });
 
     // ───── ВОСМС фиксирован ──────────────────────────────────────────────────
@@ -276,19 +289,55 @@ describe('taxCalculator', () => {
         expect(result1.monthly.vosms.amount).toBe(5_950);
     });
 
-    // ───── СО и ОПВР фиксированы ─────────────────────────────────────────────
+    // ───── ОПВР фиксирован ────────────────────────────────────────────────────
 
-    it('СО и ОПВР одинаковы при любом доходе', () => {
+    it('ОПВР фиксирован при любом доходе (bornAfter1975 = true)', () => {
         const result1 = calculateMonthlyObligations({ monthlyIncome: 50_000, customTaxRate: 3 });
         const result2 = calculateMonthlyObligations({ monthlyIncome: 5_000_000, customTaxRate: 3 });
 
-        // СО фиксированная
-        expect(result1.monthly.so.amount).toBe(result2.monthly.so.amount);
-        expect(result1.monthly.so.amount).toBe(4_250);
-
-        // ОПВР фиксированная
         expect(result1.monthly.opvr.amount).toBe(result2.monthly.opvr.amount);
         expect(result1.monthly.opvr.amount).toBe(2_975);
+    });
+
+    // ───── ОПВР = 0 если bornAfter1975 = false ──────────────────────────────
+
+    it('ОПВР = 0 если bornAfter1975 = false', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 500_000,
+            customTaxRate: 4,
+            bornAfter1975: false,
+        });
+
+        expect(result.monthly.opvr.amount).toBe(0);
+        expect(result.input.bornAfter1975).toBe(false);
+    });
+
+    // ───── ОПВР = 2975 если bornAfter1975 = true (по умолчанию) ─────────────
+
+    it('ОПВР = 2975 если bornAfter1975 = true (по умолчанию)', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 500_000,
+            customTaxRate: 4,
+        });
+
+        expect(result.monthly.opvr.amount).toBe(2_975);
+        expect(result.input.bornAfter1975).toBe(true);
+    });
+
+    // ───── СО с учётом min/max ────────────────────────────────────────────────
+
+    it('СО: база = max(доход, 1 МЗП), cap 7 МЗП', () => {
+        // Доход ниже МЗП → база = 1 МЗП = 85 000
+        const resultLow = calculateMonthlyObligations({ monthlyIncome: 30_000, customTaxRate: 3 });
+        expect(resultLow.monthly.so.amount).toBe(4_250); // 85 000 × 5%
+
+        // Доход = 300 000 → база = 300 000
+        const resultMid = calculateMonthlyObligations({ monthlyIncome: 300_000, customTaxRate: 3 });
+        expect(resultMid.monthly.so.amount).toBe(15_000); // 300 000 × 5%
+
+        // Доход > 7 МЗП (595 000) → база = 595 000
+        const resultHigh = calculateMonthlyObligations({ monthlyIncome: 1_000_000, customTaxRate: 3 });
+        expect(resultHigh.monthly.so.amount).toBe(29_750); // 595 000 × 5%
     });
 
     // ───── taxReserve = сумма всех 5 платежей ────────────────────────────────
@@ -306,5 +355,82 @@ describe('taxCalculator', () => {
             result.tax.ipn.amount;
 
         expect(result.summary.taxReserve).toBe(expected);
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // ─── Тесты для обязательств за работников ─────────────────────────────────
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    it('рассчитывает обязательства за работников при ФОТ = 500 000 ₸', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 200_000,
+            customTaxRate: 4,
+            hasEmployees: true,
+            totalEmployeeSalary: 500_000,
+        });
+
+        expect(result.employeeObligations).toBeDefined();
+        const emp = result.employeeObligations!;
+
+        // ИПН = 500 000 × 10% = 50 000
+        expect(emp.ipn.amount).toBe(50_000);
+        // ОПВ = 500 000 × 10% = 50 000
+        expect(emp.opv.amount).toBe(50_000);
+        // ОПВР = 500 000 × 3.5% = 17 500
+        expect(emp.opvr.amount).toBe(17_500);
+        // СО = 500 000 × 5% = 25 000
+        expect(emp.so.amount).toBe(25_000);
+        // ОСМС = 500 000 × 3% = 15 000
+        expect(emp.osms.amount).toBe(15_000);
+        // ВОСМС = 500 000 × 2% = 10 000
+        expect(emp.vosms.amount).toBe(10_000);
+
+        // Итого = 50 000 + 50 000 + 17 500 + 25 000 + 15 000 + 10 000 = 167 500
+        expect(emp.totalEmployeeObligations).toBe(167_500);
+        expect(emp.allPayments).toHaveLength(6);
+    });
+
+    it('без работников — employeeObligations = undefined', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 200_000,
+            customTaxRate: 4,
+            hasEmployees: false,
+            totalEmployeeSalary: 500_000,
+        });
+
+        expect(result.employeeObligations).toBeUndefined();
+    });
+
+    it('hasEmployees = true, но totalEmployeeSalary = 0 — employeeObligations = undefined', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 200_000,
+            customTaxRate: 4,
+            hasEmployees: true,
+            totalEmployeeSalary: 0,
+        });
+
+        expect(result.employeeObligations).toBeUndefined();
+    });
+
+    it('totalToPay = taxReserve + employeeTotal', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 300_000,
+            customTaxRate: 4,
+            hasEmployees: true,
+            totalEmployeeSalary: 500_000,
+        });
+
+        expect(result.summary.totalToPay).toBe(
+            result.summary.taxReserve + result.employeeObligations!.totalEmployeeObligations
+        );
+    });
+
+    it('totalToPay = taxReserve когда нет работников', () => {
+        const result = calculateMonthlyObligations({
+            monthlyIncome: 300_000,
+            customTaxRate: 4,
+        });
+
+        expect(result.summary.totalToPay).toBe(result.summary.taxReserve);
     });
 });

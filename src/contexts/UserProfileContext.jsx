@@ -9,6 +9,10 @@ const DEFAULT_PROFILE = {
     taxRate: 4,
     isBusinessMode: false,
     onboardingComplete: false,
+    bornAfter1975: true,
+    hasEmployees: false,
+    employeeCount: 0,
+    totalEmployeeSalary: 0,
 };
 
 export function UserProfileProvider({ children }) {
