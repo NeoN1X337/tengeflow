@@ -141,9 +141,19 @@ export function useTransactions(options = {}) {
         .filter(txn => txn.type === 'expense')
         .reduce((acc, txn) => acc + txn.amount, 0);
 
-    // Налогооблагаемый доход
+    // Налогооблагаемый доход (весь)
     const taxableIncome = transactions
         .filter(txn => txn.type === 'income' && txn.isTaxable)
+        .reduce((acc, txn) => acc + txn.amount, 0);
+
+    // Доход от ИП-деятельности (Зарплата) — все 5 взносов
+    const businessIncome = transactions
+        .filter(txn => txn.type === 'income' && txn.isTaxable && txn.category === 'Зарплата')
+        .reduce((acc, txn) => acc + txn.amount, 0);
+
+    // Прочий облагаемый доход (Фриланс/Инвестиции/Другое) — только ИПН
+    const otherTaxableIncome = transactions
+        .filter(txn => txn.type === 'income' && txn.isTaxable && txn.category !== 'Зарплата')
         .reduce((acc, txn) => acc + txn.amount, 0);
 
     // Динамический налог (например 3% или 4%)
@@ -159,6 +169,8 @@ export function useTransactions(options = {}) {
         totalIncome,
         totalExpense,
         taxableIncome,
+        businessIncome,
+        otherTaxableIncome,
         tax
     };
 }

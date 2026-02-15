@@ -2,7 +2,9 @@
  * Модуль «Умный расчет налогов» для ИП в РК — 2026 год.
  *
  * Рассчитывает все обязательные ежемесячные платежи ИП «за себя»:
- * ОПВ, СО, ВОСМС, ОПВР и основной налог (ИПН / СоцНалог).
+ * ОПВ, СО, ВОСМС, ОПВР и основной налог (ИПН).
+ *
+ * Ставки актуализированы согласно ТЗ 2026 года.
  */
 
 // ─── Константы 2026 ───────────────────────────────────────────────────────────
@@ -14,22 +16,16 @@ export const TAX_CONSTANTS_2026 = {
     MRP: 4_325,
     /** Ставка ОПВ — 10% */
     OPV_RATE: 0.10,
-    /** Ставка СО — 3.5% */
-    SO_RATE: 0.035,
+    /** Ставка СО — 5% (от 1 МЗП, фиксированная база) */
+    SO_RATE: 0.05,
     /** Ставка ВОСМС — 5% от базы */
     VOSMS_RATE: 0.05,
     /** Множитель базы ВОСМС: 1.4 × МЗП */
     VOSMS_BASE_MULTIPLIER: 1.4,
-    /** Ставка ОПВР — 1.5% */
-    OPVR_RATE: 0.015,
-    /** Минимальная база для ОПВ: 1 МЗП */
-    OPV_MIN_MZP: 1,
+    /** Ставка ОПВР — 3.5% (от 1 МЗП, фиксированная база) */
+    OPVR_RATE: 0.035,
     /** Максимальная база для ОПВ: 50 МЗП */
     OPV_MAX_MZP: 50,
-    /** Минимальная база для СО: 1 МЗП */
-    SO_MIN_MZP: 1,
-    /** Максимальная база для СО: 7 МЗП */
-    SO_MAX_MZP: 7,
 } as const;
 
 // ─── Типы ─────────────────────────────────────────────────────────────────────
@@ -52,6 +48,8 @@ export interface PaymentLine {
     label: string;
     /** Подсказка для пользователя (человеческим языком) */
     tooltip: string;
+    /** Описание базы расчёта */
+    base: string;
 }
 
 export interface TaxCalculationResult {
@@ -93,18 +91,18 @@ export interface TaxCalculationResult {
         totalDeductions: number;
         /** «На руки» = доход − все вычеты */
         netIncome: number;
+        /** Общий налоговый резерв (все 5 платежей: ОПВ + ОПВР + ВОСМС + СО + ИПН) */
+        taxReserve: number;
     };
+
+    /** Массив всех 5 платежей для отображения в UI */
+    allPayments: PaymentLine[];
 
     /** Подсказки для UI (готовые строки) */
     tooltips: string[];
 }
 
 // ─── Вспомогательные функции ──────────────────────────────────────────────────
-
-/** Ограничивает значение в диапазоне [min, max] */
-function clamp(value: number, min: number, max: number): number {
-    return Math.max(min, Math.min(max, value));
-}
 
 /** Округление до 2 знаков (тиын) */
 function round2(value: number): number {
@@ -119,14 +117,12 @@ function round2(value: number): number {
  * @param input — параметры расчёта
  * @returns структурированный результат для отрисовки в UI
  *
- * @example
- * ```ts
- * const result = calculateMonthlyObligations({
- *   monthlyIncome: 500_000,
- *   customTaxRate: 3,
- * });
- * console.log(result.summary.netIncome); // «На руки»
- * ```
+ * Ставки 2026:
+ * - ОПВ: 10% от фактического дохода (макс. 50 МЗП)
+ * - ОПВР: 3.5% от 1 МЗП = 2 975 ₸ (фиксированная)
+ * - ВОСМС: 5% от 1.4 МЗП = 5 950 ₸ (фиксированная)
+ * - СО: 5% от 1 МЗП = 4 250 ₸ (фиксированная)
+ * - ИПН: Доход × Пользовательский_%
  */
 export function calculateMonthlyObligations(
     input: TaxCalculationInput
@@ -142,36 +138,35 @@ export function calculateMonthlyObligations(
     const income = Math.max(monthlyIncome, 0); // Не допускаем отрицательный доход
 
     // ───────────────── ОПВ (Обязательные пенсионные взносы) ─────────────────────
-    // 10% от дохода, но база ограничена: не менее 1 МЗП, не более 50 МЗП.
+    // 10% от фактического дохода. Максимум = 50 МЗП × 10%.
+    // При нулевом доходе = 0.
     // Пенсионеры и инвалиды освобождены.
 
     let opvAmount = 0;
-    if (!isPensioner && !isDisabled) {
-        const opvBase = clamp(income, C.OPV_MIN_MZP * C.MZP, C.OPV_MAX_MZP * C.MZP);
+    if (!isPensioner && !isDisabled && income > 0) {
+        const opvBase = Math.min(income, C.OPV_MAX_MZP * C.MZP);
         opvAmount = round2(opvBase * C.OPV_RATE);
     }
 
     // ───────────────── СО (Социальные отчисления) ───────────────────────────────
-    // 3.5% от (Доход − ОПВ), база ограничена: не менее 1 МЗП, не более 7 МЗП.
+    // 5% от 1 МЗП = 4 250 ₸ (фиксированная база, не зависит от дохода).
     // Инвалиды освобождены.
 
     let soAmount = 0;
     if (!isDisabled) {
-        const soObject = Math.max(income - opvAmount, 0);
-        const soBase = clamp(soObject, C.SO_MIN_MZP * C.MZP, C.SO_MAX_MZP * C.MZP);
-        soAmount = round2(soBase * C.SO_RATE);
+        soAmount = round2(C.MZP * C.SO_RATE);
     }
 
     // ───────────────── ВОСМС (Взносы на мед. страхование) ──────────────────────
-    // Фиксированная сумма: 5% от 1.4 × МЗП. Не зависит от дохода.
+    // Фиксированная сумма: 5% от 1.4 × МЗП = 5 950 ₸. Не зависит от дохода.
 
     const vosmsBase = C.VOSMS_BASE_MULTIPLIER * C.MZP;
     const vosmsAmount = round2(vosmsBase * C.VOSMS_RATE);
 
     // ───────────────── ОПВР (Обязательные профессиональные пенсионные взносы) ───
-    // 1.5% от дохода. При нулевом доходе = 0.
+    // 3.5% от 1 МЗП = 2 975 ₸ (фиксированная база, не зависит от дохода).
 
-    const opvrAmount = round2(income * C.OPVR_RATE);
+    const opvrAmount = round2(C.MZP * C.OPVR_RATE);
 
     // ───────────────── Итого ежемесячных платежей ──────────────────────────────
 
@@ -202,17 +197,60 @@ export function calculateMonthlyObligations(
     // ───────────────── Сводка ─────────────────────────────────────────────────
 
     const grossIncome = income;
+    const taxReserve = round2(opvAmount + opvrAmount + vosmsAmount + soAmount + ipnAmount);
     const totalDeductions = round2(totalMonthly + totalTax);
     const netIncome = round2(grossIncome - totalDeductions);
 
     // ───────────────── Подсказки ───────────────────────────────────────────────
 
     const tooltips: string[] = [
-        `ОПВ — это ваша будущая пенсия. 10% от дохода, минимум ${C.MZP.toLocaleString('ru-KZ')} ₸ (1 МЗП) даже при нулевом доходе.`,
-        `СО — социальное страхование: больничные, декрет, потеря работы. 3.5% от (доход − ОПВ).`,
-        `ВОСМС — медицинская страховка. Фиксированная сумма ${vosmsAmount.toLocaleString('ru-KZ')} ₸/мес, не зависит от дохода.`,
+        `ОПВ — это ваша будущая пенсия. 10% от дохода (макс. ${(C.OPV_MAX_MZP * C.MZP).toLocaleString('ru-KZ')} ₸).`,
+        `СО — социальное страхование: больничные, декрет. ${(C.SO_RATE * 100)}% от 1 МЗП = ${soAmount.toLocaleString('ru-KZ')} ₸.`,
+        `ВОСМС — медицинская страховка. Фиксированная сумма ${vosmsAmount.toLocaleString('ru-KZ')} ₸/мес.`,
+        `ОПВР — профессиональные пенсионные взносы. ${(C.OPVR_RATE * 100)}% от 1 МЗП = ${opvrAmount.toLocaleString('ru-KZ')} ₸.`,
         `Итого на руки — это ваш реальный доход после всех обязательных платежей и налогов.`,
     ];
+
+    // ───────────────── Массив всех платежей (для UI) ──────────────────────────
+
+    const opvLine: PaymentLine = {
+        amount: opvAmount,
+        label: 'ОПВ (пенсионные)',
+        tooltip: tooltips[0],
+        base: income > 0 ? `${(C.OPV_RATE * 100)}% от дохода` : '—',
+    };
+
+    const opvrLine: PaymentLine = {
+        amount: opvrAmount,
+        label: 'ОПВР (проф. взносы)',
+        tooltip: tooltips[3],
+        base: `${(C.OPVR_RATE * 100)}% от 1 МЗП`,
+    };
+
+    const vosmsLine: PaymentLine = {
+        amount: vosmsAmount,
+        label: 'ВОСМС (мед. страховка)',
+        tooltip: tooltips[2],
+        base: `${(C.VOSMS_RATE * 100)}% от 1.4 МЗП`,
+    };
+
+    const soLine: PaymentLine = {
+        amount: soAmount,
+        label: 'СО (соц. отчисления)',
+        tooltip: tooltips[1],
+        base: `${(C.SO_RATE * 100)}% от 1 МЗП`,
+    };
+
+    const ipnLine: PaymentLine = {
+        amount: ipnAmount,
+        label: isSimplified ? 'ИПН (50% от налога)' : `ИПН (${customTaxRate}%)`,
+        tooltip: isSimplified
+            ? `При упрощённой декларации общий налог ${customTaxRate}% делится пополам: половина — ИПН.`
+            : `Индивидуальный подоходный налог по ставке ${customTaxRate}%.`,
+        base: isSimplified ? '50% от общего налога' : `${customTaxRate}% от дохода`,
+    };
+
+    const allPayments: PaymentLine[] = [opvLine, opvrLine, vosmsLine, soLine, ipnLine];
 
     // ───────────────── Результат ──────────────────────────────────────────────
 
@@ -225,44 +263,23 @@ export function calculateMonthlyObligations(
         },
 
         monthly: {
-            opv: {
-                amount: opvAmount,
-                label: 'ОПВ (пенсионные)',
-                tooltip: tooltips[0],
-            },
-            so: {
-                amount: soAmount,
-                label: 'СО (соц. отчисления)',
-                tooltip: tooltips[1],
-            },
-            vosms: {
-                amount: vosmsAmount,
-                label: 'ВОСМС (мед. страховка)',
-                tooltip: tooltips[2],
-            },
-            opvr: {
-                amount: opvrAmount,
-                label: 'ОПВР (проф. взносы)',
-                tooltip: `ОПВР — обязательные профессиональные пенсионные взносы работодателя за себя. 1.5% от дохода.`,
-            },
+            opv: opvLine,
+            so: soLine,
+            vosms: vosmsLine,
+            opvr: opvrLine,
             totalMonthly,
         },
 
         tax: {
             totalTax,
-            ipn: {
-                amount: ipnAmount,
-                label: isSimplified ? 'ИПН (50% от налога)' : `ИПН (${customTaxRate}%)`,
-                tooltip: isSimplified
-                    ? `При упрощённой декларации общий налог ${customTaxRate}% делится пополам: половина — ИПН.`
-                    : `Индивидуальный подоходный налог по ставке ${customTaxRate}%.`,
-            },
+            ipn: ipnLine,
             socialTax: {
                 amount: socialTaxAmount,
                 label: isSimplified ? 'Соц. налог (50% − СО)' : 'Соц. налог',
                 tooltip: isSimplified
                     ? `Вторая половина налога — социальный налог, уменьшенный на сумму СО (${soAmount.toLocaleString('ru-KZ')} ₸).`
                     : `Социальный налог не начисляется при данном режиме налогообложения.`,
+                base: isSimplified ? '50% налога − СО' : '—',
             },
             isSimplified,
         },
@@ -271,8 +288,10 @@ export function calculateMonthlyObligations(
             grossIncome,
             totalDeductions,
             netIncome,
+            taxReserve,
         },
 
+        allPayments,
         tooltips,
     };
 }

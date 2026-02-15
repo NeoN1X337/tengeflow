@@ -6,6 +6,7 @@ import { useTransactions } from '../hooks/useTransactions';
 import { getTaxStats } from '../utils/taxUtils';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { formatCurrency } from '../utils/formatUtils';
+import TaxMonitor from '../components/TaxMonitor';
 import CategoryPieChart from '../components/charts/CategoryPieChart';
 import IncomeBarChart from '../components/charts/IncomeBarChart';
 
@@ -47,7 +48,7 @@ export default function Analytics() {
         }
     }, [selectedYear, selectedMonth]);
 
-    const { transactions, taxableIncome, tax, loading } = useTransactions({
+    const { transactions, taxableIncome, businessIncome, otherTaxableIncome, tax, loading } = useTransactions({
         dateRange,
         taxRate // Передаем ставку в хук
     });
@@ -116,12 +117,6 @@ export default function Analytics() {
     const taxStats = useMemo(() => getTaxStats(yearTransactions, selectedYear, taxRate),
         [yearTransactions, selectedYear, taxRate]);
 
-    // Данные для отображения в мониторе
-    // Если выбран "Весь год", берем данные из taxStats для полной синхронизации с календарем
-    // В противном случае берем данные из текущего фильтра (месяца)
-    const displayTaxableIncome = selectedMonth === 'all' ? taxStats.year.income : taxableIncome;
-    const displayTax = selectedMonth === 'all' ? taxStats.year.tax : tax;
-    const displayNetIncome = displayTaxableIncome - displayTax;
 
     return (
         <div className="space-y-6 pb-6">
@@ -138,48 +133,14 @@ export default function Analytics() {
                 />
             </div>
 
-            {/* Налоговый калькулятор — only in business mode */}
+            {/* Налоговый монитор — only in business mode */}
             {isBusiness && (
-                <Card className="shadow-lg border-t-4 border-t-blue-600">
-                    <div className="flex items-center gap-2 mb-4">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                            <Calculator className="w-5 h-5 text-blue-600" />
-                        </div>
-                        <div className="flex flex-col">
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                                Налоговый монитор
-                            </h3>
-                            <div className="mt-1">
-                                <Badge color="blue" className="inline-flex">
-                                    Упрощенная декларация (ИПН: {taxRate}%)
-                                </Badge>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Налогооблагаемый доход</p>
-                            <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                                {formatCurrency(displayTaxableIncome)} ₸
-                            </p>
-                        </div>
-
-                        <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-xl">
-                            <p className="text-sm text-red-600 dark:text-red-400 mb-1">Налог ({taxRate}%)</p>
-                            <p className="text-2xl font-bold text-red-600 dark:text-red-400" data-testid="tax-monitor-amount">
-                                {formatCurrency(displayTax)} ₸
-                            </p>
-                        </div>
-
-                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                            <p className="text-sm text-green-600 dark:text-green-400 mb-1">Чистый доход</p>
-                            <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                {formatCurrency(displayNetIncome)} ₸
-                            </p>
-                        </div>
-                    </div>
-                </Card>
+                <TaxMonitor
+                    viewMode="full"
+                    businessIncome={businessIncome}
+                    otherTaxableIncome={otherTaxableIncome}
+                    taxRate={taxRate}
+                />
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

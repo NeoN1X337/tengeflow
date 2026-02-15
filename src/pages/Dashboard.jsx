@@ -1,15 +1,15 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Card, Button } from 'flowbite-react';
-import { Plus, TrendingUp, Wallet, Calculator } from 'lucide-react';
+import { Plus, TrendingUp, Wallet } from 'lucide-react';
 import { useTransactions } from '../hooks/useTransactions';
 import TransactionModal from '../components/TransactionModal';
 import TransactionItem from '../components/TransactionItem';
 import FilterBar from '../components/FilterBar';
 import PeriodSelector from '../components/PeriodSelector';
+import TaxMonitor from '../components/TaxMonitor';
 import { useNotification } from '../contexts/NotificationContext';
 import { useUserProfile } from '../hooks/useUserProfile';
 import { formatCurrency, formatDate } from '../utils/formatUtils';
-import { calculateMonthlyObligations } from '../utils/taxCalculator';
 
 export default function Dashboard() {
     const { showToast } = useNotification();
@@ -53,7 +53,7 @@ export default function Dashboard() {
         }
     }, [selectedYear, selectedMonth]);
 
-    const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, balance, totalIncome, totalExpense } = useTransactions({
+    const { transactions, loading, addTransaction, updateTransaction, deleteTransaction, balance, totalIncome, totalExpense, businessIncome, otherTaxableIncome } = useTransactions({
         filterFuture: true,
         orderByCreatedAt: true,
         type: filters.type,
@@ -63,14 +63,7 @@ export default function Dashboard() {
         taxRate // Pass dynamic tax rate
     });
 
-    // Tax calculation for business mode
-    const taxResult = useMemo(() => {
-        if (!isBusiness || totalIncome <= 0) return null;
-        return calculateMonthlyObligations({
-            monthlyIncome: totalIncome,
-            customTaxRate: taxRate,
-        });
-    }, [isBusiness, totalIncome, taxRate]);
+    // Tax calculation handled by TaxMonitor component
 
     const handleSaveTransaction = async (data) => {
         if (editingTransaction) {
@@ -164,49 +157,13 @@ export default function Dashboard() {
             </Card>
 
             {/* Tax Widget — only for Business mode */}
-            {isBusiness && taxResult && (
-                <Card className="shadow-lg border-l-4 border-l-indigo-500">
-                    <div className="flex items-center gap-2 mb-4">
-                        <Calculator className="w-5 h-5 text-indigo-600" />
-                        <h3 className="text-lg font-bold text-gray-900">
-                            Налоговый монитор (ставка {taxRate}%)
-                        </h3>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">{taxResult.monthly.opv.label}</p>
-                            <p className="font-bold text-blue-700">{formatCurrency(taxResult.monthly.opv.amount)} ₸</p>
-                        </div>
-                        <div className="bg-green-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">{taxResult.monthly.so.label}</p>
-                            <p className="font-bold text-green-700">{formatCurrency(taxResult.monthly.so.amount)} ₸</p>
-                        </div>
-                        <div className="bg-purple-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">{taxResult.monthly.vosms.label}</p>
-                            <p className="font-bold text-purple-700">{formatCurrency(taxResult.monthly.vosms.amount)} ₸</p>
-                        </div>
-                        <div className="bg-orange-50 p-3 rounded-lg">
-                            <p className="text-xs text-gray-600">{taxResult.monthly.opvr.label}</p>
-                            <p className="font-bold text-orange-700">{formatCurrency(taxResult.monthly.opvr.amount)} ₸</p>
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t border-gray-200">
-                        <div>
-                            <p className="text-sm text-gray-600">Обязательные платежи/мес</p>
-                            <p className="text-xl font-bold text-red-600">{formatCurrency(taxResult.monthly.totalMonthly)} ₸</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">Налог ({taxResult.tax.isSimplified ? 'упрощёнка' : 'розница'})</p>
-                            <p className="text-xl font-bold text-indigo-600">{formatCurrency(taxResult.tax.totalTax)} ₸</p>
-                        </div>
-                        <div>
-                            <p className="text-sm text-gray-600">На руки</p>
-                            <p className="text-xl font-bold text-green-600">{formatCurrency(taxResult.summary.netIncome)} ₸</p>
-                        </div>
-                    </div>
-                </Card>
+            {isBusiness && (
+                <TaxMonitor
+                    viewMode="compact"
+                    businessIncome={businessIncome}
+                    otherTaxableIncome={otherTaxableIncome}
+                    taxRate={taxRate}
+                />
             )}
 
             {/* Последние операции */}
